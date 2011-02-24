@@ -2,9 +2,13 @@ require 'rubygems'
 gem "opentox-ruby", "~> 0"
 require 'opentox-ruby'
 
+set :lock, true
+
 helpers do
         def next_id
-          Dir["./public/*yaml"].collect{|f| File.basename(f.sub(/.yaml/,'')).to_i}.sort.last + 1
+	  id = Dir["./public/*yaml"].collect{|f| File.basename(f.sub(/.yaml/,'')).to_i}.sort.last
+	  id = 0 if id.nil?
+	  id + 1
         end
 
         def uri(id)
@@ -83,9 +87,7 @@ end
 before do
   @accept = request.env['HTTP_ACCEPT']
   @accept = 'application/rdf+xml' if @accept == '*/*' or @accept == '' or @accept.nil?
-  LOGGER.debug "PARAMS"
   @id = request.path_info.match(/^\/\d+/)
-  LOGGER.debug @id
   unless @id.nil?
     @id = @id.to_s.sub(/\//,'').to_i
 
