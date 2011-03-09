@@ -2,4 +2,4 @@ api_key.rb
 *.sqlite3
 tmp/*
 log/*
-datasets/*
+public/*
