@@ -6,7 +6,8 @@ OpenTox Dataset
 * Implements a subset of the OpenTox compound API 1.1 (http://opentox.org/dev/apis/api-1.1/dataset)
 * Supports the internal YAML representation of opentox-ruby
 
-REST operations:
+REST operations
+---------------
 
 Get a list of datasets  GET     /       -                       List of dataset URIs    200,400,404
 Get a dataset           GET     /{id}   -                       Dataset representation  200,400,404
@@ -14,11 +15,13 @@ Upload a dataset        POST    /       Dataset representation  Dataset URI     
 Delete a dataset        DELETE  /{id}   -                       -                       200,404
 Delete all datasets     DELETE  /       -                       -                       200,404
 
-Supported MIME formats (http://chemical-mime.sourceforge.net/):
+Supported MIME formats (http://chemical-mime.sourceforge.net/)
+--------------------------------------------------------------
 
   * application/rdf+xml (default): read/write OWL-DL
 
-Examples:
+Examples
+--------
 
 Get a list of all datasets:
 
@@ -36,6 +39,13 @@ Delete a dataset:
 
   curl -X DELETE http://webservices.in-silico.ch/dataset/{id}
 
-Installation: http://wiki.github.com/helma/opentox-documentation/installation-of-opentox-webservices
+API documentation
+-----------------
 
-Copyright (c) 2009 Christoph Helma. See LICENSE for details.
+http://rdoc.info/github/opentox/dataset
+
+Copyright
+---------
+
+Copyright (c) 2009-2011 Christoph Helma, Martin Guetlein, Micha Rautenberg, Andreas Maunz, David Vorgrimmler, Denis Gebele. See LICENSE for details.
+
