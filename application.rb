@@ -5,83 +5,83 @@ require 'opentox-ruby'
 set :lock, true
 
 helpers do
-        def next_id
+  def next_id
 	  id = Dir["./public/*yaml"].collect{|f| File.basename(f.sub(/.yaml/,'')).to_i}.sort.last
 	  id = 0 if id.nil?
 	  id + 1
+  end
+
+  def uri(id)
+    url_for "/#{id}", :full
+  end
+
+  # subjectid ist stored as memeber variable, not in params
+  def load_dataset(id, params,content_type,input_data)
+
+    @uri = uri id
+    raise "store subject-id in dataset-object, not in params" if params.has_key?(:subjectid) and @subjectid==nil
+
+    content_type = "application/rdf+xml" if content_type.nil?
+    dataset = OpenTox::Dataset.new(nil, @subjectid) 
+
+    case content_type
+
+    when /yaml/
+      dataset.load_yaml(input_data)
+
+    when /application\/rdf\+xml/
+      dataset.load_rdfxml(input_data)
+
+    when /multipart\/form-data/ , "application/x-www-form-urlencoded" # file uploads
+
+      case params[:file][:type]
+
+      when /yaml/
+        dataset.load_yaml(params[:file][:tempfile].read)
+
+      when "application/rdf+xml"
+        dataset.load_rdfxml_file(params[:file][:tempfile])
+
+      when "text/csv"
+        dataset = OpenTox::Dataset.new @uri
+        dataset.load_csv(params[:file][:tempfile].read)
+        dataset.add_metadata({
+        DC.title => File.basename(params[:file][:filename],".csv"),
+        OT.hasSource => File.basename(params[:file][:filename])
+      })
+
+      when /ms-excel/
+        extension =  File.extname(params[:file][:filename])
+        case extension
+        when ".xls"
+          xls = params[:file][:tempfile].path + ".xls"
+          File.rename params[:file][:tempfile].path, xls # roo needs these endings
+          book = Excel.new xls
+        when ".xlsx"
+          xlsx = params[:file][:tempfile].path + ".xlsx"
+          File.rename params[:file][:tempfile].path, xlsx # roo needs these endings
+          book = Excel.new xlsx
+        else
+          raise "#{params[:file][:filename]} is not a valid Excel input file."
         end
+        dataset.load_spreadsheet(book)
+        dataset.add_metadata({
+          DC.title => File.basename(params[:file][:filename],extension),
+          OT.hasSource => File.basename(params[:file][:filename])
+        })
 
-        def uri(id)
-          url_for "/#{id}", :full
-        end
+      else
+        raise "MIME type \"#{params[:file][:type]}\" not supported."
+      end
 
-        # subjectid ist stored as memeber variable, not in params
-        def load_dataset(id, params,content_type,input_data)
+    else
+      raise "MIME type \"#{content_type}\" not supported."
+    end
 
-          @uri = uri id
-          raise "store subject-id in dataset-object, not in params" if params.has_key?(:subjectid) and @subjectid==nil
-
-          content_type = "application/rdf+xml" if content_type.nil?
-          dataset = OpenTox::Dataset.new(nil, @subjectid) 
-
-          case content_type
-
-          when /yaml/
-            dataset.load_yaml(input_data)
-
-          when /application\/rdf\+xml/
-            dataset.load_rdfxml(input_data)
-
-          when /multipart\/form-data/ , "application/x-www-form-urlencoded" # file uploads
-
-            case params[:file][:type]
-
-            when /yaml/
-              dataset.load_yaml(params[:file][:tempfile].read)
-
-            when "application/rdf+xml"
-              dataset.load_rdfxml_file(params[:file][:tempfile])
-
-            when "text/csv"
-              dataset = OpenTox::Dataset.new @uri
-              dataset.load_csv(params[:file][:tempfile].read)
-              dataset.add_metadata({
-              DC.title => File.basename(params[:file][:filename],".csv"),
-              OT.hasSource => File.basename(params[:file][:filename])
-            })
-
-            when /ms-excel/
-              extension =  File.extname(params[:file][:filename])
-              case extension
-              when ".xls"
-                xls = params[:file][:tempfile].path + ".xls"
-                File.rename params[:file][:tempfile].path, xls # roo needs these endings
-                book = Excel.new xls
-              when ".xlsx"
-                xlsx = params[:file][:tempfile].path + ".xlsx"
-                File.rename params[:file][:tempfile].path, xlsx # roo needs these endings
-                book = Excel.new xlsx
-              else
-                raise "#{params[:file][:filename]} is not a valid Excel input file."
-              end
-              dataset.load_spreadsheet(book)
-              dataset.add_metadata({
-                DC.title => File.basename(params[:file][:filename],extension),
-                OT.hasSource => File.basename(params[:file][:filename])
-              })
-
-            else
-              raise "MIME type \"#{params[:file][:type]}\" not supported."
-            end
-
-          else
-            raise "MIME type \"#{content_type}\" not supported."
-          end
-
-          dataset.uri = @uri # update uri (also in metdata)
-          dataset.features.keys.each { |f| dataset.features[f][OT.hasSource] = dataset.metadata[OT.hasSource] unless dataset.features[f][OT.hasSource]}
-          File.open("public/#{@id}.yaml","w+"){|f| f.puts dataset.to_yaml}
-        end
+    dataset.uri = @uri # update uri (also in metdata)
+    dataset.features.keys.each { |f| dataset.features[f][OT.hasSource] = dataset.metadata[OT.hasSource] unless dataset.features[f][OT.hasSource]}
+    File.open("public/#{@id}.yaml","w+"){|f| f.puts dataset.to_yaml}
+  end
 end
 
 before do
@@ -96,24 +96,22 @@ before do
     halt 404, "Dataset #{@id} not found." unless File.exists? @yaml_file
 
     extension = File.extname(request.path_info)
-    #extension = File.extname(params[:id]).sub(/\./,'')
     unless extension.empty?
-     #request.path_info.sub!(/\.#{extension}$/,'')
      case extension
-     when "html"
+     when ".html"
        @accept = 'text/html'
-     when "yaml"
+     when ".yaml"
        @accept = 'application/x-yaml'
-     when "csv"
+     when ".csv"
        @accept = 'text/csv'
-     when "rdfxml"
+     when ".rdfxml"
        @accept = 'application/rdf+xml'
-     when "xls"
+     when ".xls"
        @accept = 'application/ms-excel'
      else
        halt 404, "File format #{extension} not supported."
      end
-   end
+    end
   end
   
   # make sure subjectid is not included in params, subjectid is set as member variable
