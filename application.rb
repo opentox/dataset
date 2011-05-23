@@ -1,5 +1,5 @@
 require 'rubygems'
-gem "opentox-ruby", "~> 1"
+gem "opentox-ruby", "~> 2"
 require 'opentox-ruby'
 
 set :lock, true
