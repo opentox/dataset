@@ -93,7 +93,7 @@ before do
 
     @uri = uri @id
     @yaml_file = "public/#{@id}.yaml"
-    halt 404, "Dataset #{@id} not found." unless File.exists? @yaml_file
+    raise OpenTox::NotFoundError.new "Dataset #{@id} not found." unless File.exists? @yaml_file
 
     extension = File.extname(request.path_info)
     unless extension.empty?
@@ -109,7 +109,7 @@ before do
      when ".xls"
        @accept = 'application/ms-excel'
      else
-       halt 404, "File format #{extension} not supported."
+       raise OpenTox::NotFoundError.new "File format #{extension} not supported."
      end
     end
   end
@@ -162,7 +162,7 @@ get '/:id' do
     File.open(file).read
 
   else
-    halt 404, "Content-type #{@accept} not supported."
+    raise OpenTox::NotFoundError.new "Content-type #{@accept} not supported."
   end
 end
 
@@ -270,7 +270,7 @@ post '/?' do
       OpenTox::Authorization.check_policy(@uri, @subjectid) if File.exists? @yaml_file
       @uri
     end
-    halt 503,task.uri+"\n" if task.status == "Cancelled"
+    raise OpenTox::ServiceUnavailableError.newtask.uri+"\n" if task.status == "Cancelled"
     halt 202,task.uri+"\n"
   end
 end
@@ -294,7 +294,7 @@ post '/:id' do
     load_dataset @id, params, request.content_type, request.env["rack.input"].read 
     @uri
   end
-  halt 503,task.uri+"\n" if task.status == "Cancelled"
+  raise OpenTox::ServiceUnavailableError.newtask.uri+"\n" if task.status == "Cancelled"
   halt 202,task.uri.to_s+"\n"
 end
 
@@ -315,7 +315,7 @@ delete '/:id' do
     response['Content-Type'] = 'text/plain'
     "Dataset #{@id} deleted."
   rescue
-    halt 404, "Dataset #{@id} does not exist."
+    raise OpenTox::NotFoundError.new "Dataset #{@id} does not exist."
   end
 end
 
