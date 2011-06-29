@@ -123,8 +123,15 @@ end
 # Get a list of available datasets
 # @return [text/uri-list] List of available datasets
 get '/?' do
-  response['Content-Type'] = 'text/uri-list'
-  Dir["./public/*yaml"].collect{|f| File.basename(f.sub(/.yaml/,'')).to_i}.sort.collect{|n| uri n}.join("\n") + "\n"
+  uri_list = Dir["./public/*yaml"].collect{|f| File.basename(f.sub(/.yaml/,'')).to_i}.sort.collect{|n| uri n}.join("\n") + "\n" 
+  case @accept
+  when /html/
+    response['Content-Type'] = 'text/html'
+    OpenTox.text_to_html uri_list
+  else
+    response['Content-Type'] = 'text/uri-list'
+    uri_list
+  end
 end
 
 # Get a dataset representation
