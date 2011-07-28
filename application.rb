@@ -175,9 +175,13 @@ get '/:id' do
     response['Content-Type'] = 'application/ms-excel'
     File.open(file).read
 
-  when /chemical\/x-mdl-sdfile/
+  when /sdfile/
     response['Content-Type'] = 'chemical/x-mdl-sdfile'
     YAML.load_file(@yaml_file).to_sdf
+
+  when /uri-list/
+    response['Content-Type'] = 'text/uri-list'
+    YAML.load_file(@yaml_file).to_urilist
 
   else
     raise OpenTox::NotFoundError.new "Content-type #{@accept} not supported."
