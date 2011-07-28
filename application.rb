@@ -22,6 +22,7 @@ helpers do
     raise "store subject-id in dataset-object, not in params" if params.has_key?(:subjectid) and @subjectid==nil
 
     content_type = "application/rdf+xml" if content_type.nil?
+    #dataset = OpenTox::Dataset.new(@uri, @subjectid) 
     dataset = OpenTox::Dataset.new(nil, @subjectid) 
 
     case content_type
@@ -31,10 +32,16 @@ helpers do
 
     when /application\/rdf\+xml/
       dataset.load_rdfxml(input_data)
+         
+    when "chemical/x-mdl-sdfile"
+      dataset.load_sdf(input_data)
 
     when /multipart\/form-data/ , "application/x-www-form-urlencoded" # file uploads
 
       case params[:file][:type]
+
+      when "chemical/x-mdl-sdfile"
+        dataset.load_sdf(input_data)
 
       when /yaml/
         dataset.load_yaml(params[:file][:tempfile].read)
@@ -43,7 +50,7 @@ helpers do
         dataset.load_rdfxml_file(params[:file][:tempfile])
 
       when "text/csv"
-        dataset = OpenTox::Dataset.new @uri
+        #dataset = OpenTox::Dataset.new @uri
         dataset.load_csv(params[:file][:tempfile].read)
         dataset.add_metadata({
         DC.title => File.basename(params[:file][:filename],".csv"),
