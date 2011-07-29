@@ -115,6 +115,8 @@ before do
        @accept = 'application/rdf+xml'
      when ".xls"
        @accept = 'application/ms-excel'
+     when ".sdf"
+       @accept = 'chemical/x-mdl-sdfile'
      else
        raise OpenTox::NotFoundError.new "File format #{extension} not supported."
      end
