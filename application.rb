@@ -22,6 +22,7 @@ helpers do
     raise "store subject-id in dataset-object, not in params" if params.has_key?(:subjectid) and @subjectid==nil
 
     content_type = "application/rdf+xml" if content_type.nil?
+    #dataset = OpenTox::Dataset.new(@uri, @subjectid) 
     dataset = OpenTox::Dataset.new(nil, @subjectid) 
 
     case content_type
@@ -31,10 +32,16 @@ helpers do
 
     when /application\/rdf\+xml/
       dataset.load_rdfxml(input_data)
+         
+    when "chemical/x-mdl-sdfile"
+      dataset.load_sdf(input_data)
 
     when /multipart\/form-data/ , "application/x-www-form-urlencoded" # file uploads
 
       case params[:file][:type]
+
+      when "chemical/x-mdl-sdfile"
+        dataset.load_sdf(input_data)
 
       when /yaml/
         dataset.load_yaml(params[:file][:tempfile].read)
@@ -43,7 +50,7 @@ helpers do
         dataset.load_rdfxml_file(params[:file][:tempfile])
 
       when "text/csv"
-        dataset = OpenTox::Dataset.new @uri
+        #dataset = OpenTox::Dataset.new @uri
         dataset.load_csv(params[:file][:tempfile].read)
         dataset.add_metadata({
         DC.title => File.basename(params[:file][:filename],".csv"),
@@ -93,7 +100,7 @@ before do
 
     @uri = uri @id
     @yaml_file = "public/#{@id}.yaml"
-    halt 404, "Dataset #{@id} not found." unless File.exists? @yaml_file
+    raise OpenTox::NotFoundError.new "Dataset #{@id} not found." unless File.exists? @yaml_file
 
     extension = File.extname(request.path_info)
     unless extension.empty?
@@ -108,8 +115,10 @@ before do
        @accept = 'application/rdf+xml'
      when ".xls"
        @accept = 'application/ms-excel'
+     when ".sdf"
+       @accept = 'chemical/x-mdl-sdfile'
      else
-       halt 404, "File format #{extension} not supported."
+       raise OpenTox::NotFoundError.new "File format #{extension} not supported."
      end
     end
   end
@@ -123,8 +132,15 @@ end
 # Get a list of available datasets
 # @return [text/uri-list] List of available datasets
 get '/?' do
-  response['Content-Type'] = 'text/uri-list'
-  Dir["./public/*yaml"].collect{|f| File.basename(f.sub(/.yaml/,'')).to_i}.sort.collect{|n| uri n}.join("\n") + "\n"
+  uri_list = Dir["./public/*yaml"].collect{|f| File.basename(f.sub(/.yaml/,'')).to_i}.sort.collect{|n| uri n}.join("\n") + "\n" 
+  case @accept
+  when /html/
+    response['Content-Type'] = 'text/html'
+    OpenTox.text_to_html uri_list
+  else
+    response['Content-Type'] = 'text/uri-list'
+    uri_list
+  end
 end
 
 # Get a dataset representation
@@ -161,8 +177,16 @@ get '/:id' do
     response['Content-Type'] = 'application/ms-excel'
     File.open(file).read
 
+  when /sdfile/
+    response['Content-Type'] = 'chemical/x-mdl-sdfile'
+    YAML.load_file(@yaml_file).to_sdf
+
+  when /uri-list/
+    response['Content-Type'] = 'text/uri-list'
+    YAML.load_file(@yaml_file).to_urilist
+
   else
-    halt 404, "Content-type #{@accept} not supported."
+    raise OpenTox::NotFoundError.new "Content-type #{@accept} not supported."
   end
 end
 
@@ -270,7 +294,7 @@ post '/?' do
       OpenTox::Authorization.check_policy(@uri, @subjectid) if File.exists? @yaml_file
       @uri
     end
-    halt 503,task.uri+"\n" if task.status == "Cancelled"
+    raise OpenTox::ServiceUnavailableError.newtask.uri+"\n" if task.status == "Cancelled"
     halt 202,task.uri+"\n"
   end
 end
@@ -294,7 +318,7 @@ post '/:id' do
     load_dataset @id, params, request.content_type, request.env["rack.input"].read 
     @uri
   end
-  halt 503,task.uri+"\n" if task.status == "Cancelled"
+  raise OpenTox::ServiceUnavailableError.newtask.uri+"\n" if task.status == "Cancelled"
   halt 202,task.uri.to_s+"\n"
 end
 
@@ -315,7 +339,7 @@ delete '/:id' do
     response['Content-Type'] = 'text/plain'
     "Dataset #{@id} deleted."
   rescue
-    halt 404, "Dataset #{@id} does not exist."
+    raise OpenTox::NotFoundError.new "Dataset #{@id} does not exist."
   end
 end
 
