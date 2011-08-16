@@ -163,7 +163,7 @@ get '/:id' do
     response['Content-Type'] = 'application/x-yaml'
     File.read(@yaml_file)
 
-   when /html/
+  when /html/
     response['Content-Type'] = 'text/html'
     OpenTox.text_to_html File.read(@yaml_file) 
 
