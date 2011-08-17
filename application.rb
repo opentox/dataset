@@ -4,9 +4,11 @@ require 'opentox-ruby'
 
 set :lock, true
 
+@@datadir = "data"
+
 helpers do
   def next_id
-	  id = Dir["./public/*yaml"].collect{|f| File.basename(f.sub(/.yaml/,'')).to_i}.sort.last
+	  id = Dir["./#{@@datadir}/*yaml"].collect{|f| File.basename(f.sub(/.yaml/,'')).to_i}.sort.last
 	  id = 0 if id.nil?
 	  id + 1
   end
@@ -31,27 +33,27 @@ helpers do
       dataset.load_yaml(input_data)
 
     when /application\/rdf\+xml/
-      dataset.load_rdfxml(input_data)
+      dataset.load_rdfxml(input_data, @subjectid)
          
     when "chemical/x-mdl-sdfile"
-      dataset.load_sdf(input_data)
+      dataset.load_sdf(input_data, @subjectid)
 
     when /multipart\/form-data/ , "application/x-www-form-urlencoded" # file uploads
 
       case params[:file][:type]
 
       when "chemical/x-mdl-sdfile"
-        dataset.load_sdf(input_data)
+        dataset.load_sdf(input_data, @subjectid)
 
       when /yaml/
         dataset.load_yaml(params[:file][:tempfile].read)
 
       when "application/rdf+xml"
-        dataset.load_rdfxml_file(params[:file][:tempfile])
+        dataset.load_rdfxml_file(params[:file][:tempfile], @subjectid)
 
       when "text/csv"
         #dataset = OpenTox::Dataset.new @uri
-        dataset.load_csv(params[:file][:tempfile].read)
+        dataset.load_csv(params[:file][:tempfile].read, @subjectid)
         dataset.add_metadata({
         DC.title => File.basename(params[:file][:filename],".csv"),
         OT.hasSource => File.basename(params[:file][:filename])
@@ -71,7 +73,7 @@ helpers do
         else
           raise "#{params[:file][:filename]} is not a valid Excel input file."
         end
-        dataset.load_spreadsheet(book)
+        dataset.load_spreadsheet(book, @subjectid)
         dataset.add_metadata({
           DC.title => File.basename(params[:file][:filename],extension),
           OT.hasSource => File.basename(params[:file][:filename])
@@ -87,11 +89,12 @@ helpers do
 
     dataset.uri = @uri # update uri (also in metdata)
     dataset.features.keys.each { |f| dataset.features[f][OT.hasSource] = dataset.metadata[OT.hasSource] unless dataset.features[f][OT.hasSource]}
-    File.open("public/#{@id}.yaml","w+"){|f| f.puts dataset.to_yaml}
+    File.open("#{@@datadir}/#{@id}.yaml","w+"){|f| f.puts dataset.to_yaml}
   end
 end
 
 before do
+
   @accept = request.env['HTTP_ACCEPT']
   @accept = 'application/rdf+xml' if @accept == '*/*' or @accept == '' or @accept.nil?
   @id = request.path_info.match(/^\/\d+/)
@@ -99,7 +102,7 @@ before do
     @id = @id.to_s.sub(/\//,'').to_i
 
     @uri = uri @id
-    @yaml_file = "public/#{@id}.yaml"
+    @yaml_file = "#{@@datadir}/#{@id}.yaml"
     raise OpenTox::NotFoundError.new "Dataset #{@id} not found." unless File.exists? @yaml_file
 
     extension = File.extname(request.path_info)
@@ -132,7 +135,7 @@ end
 # Get a list of available datasets
 # @return [text/uri-list] List of available datasets
 get '/?' do
-  uri_list = Dir["./public/*yaml"].collect{|f| File.basename(f.sub(/.yaml/,'')).to_i}.sort.collect{|n| uri n}.join("\n") + "\n" 
+  uri_list = Dir["./#{@@datadir}/*yaml"].collect{|f| File.basename(f.sub(/.yaml/,'')).to_i}.sort.collect{|n| uri n}.join("\n") + "\n" 
   case @accept
   when /html/
     response['Content-Type'] = 'text/html'
@@ -147,21 +150,22 @@ end
 # @param [Header] Accept one of `application/rdf+xml, application-x-yaml, text/csv, application/ms-excel` (default application/rdf+xml)
 # @return [application/rdf+xml, application-x-yaml, text/csv, application/ms-excel] Dataset representation
 get '/:id' do
-  
   case @accept
 
   when /rdf/ # redland sends text/rdf instead of application/rdf+xml
-    file = "public/#{params[:id]}.rdfxml"
+    file = "#{@@datadir}/#{params[:id]}.rdfxml"
     unless File.exists? file # lazy rdfxml generation
       dataset = YAML.load_file(@yaml_file)
       File.open(file,"w+") { |f| f.puts dataset.to_rdfxml }
     end
-    response['Content-Type'] = 'application/rdf+xml'
-    File.read(file)
+    #response['Content-Type'] = 'application/rdf+xml'
+    #File.read(file)
+    send_file file, :type => 'application/rdf+xml'
 
   when /yaml/
-    response['Content-Type'] = 'application/x-yaml'
-    File.read(@yaml_file)
+    #response['Content-Type'] = 'application/x-yaml'
+    #File.read(@yaml_file)
+    send_file @yaml_file, :type => 'application/x-yaml' 
 
   when /html/
     response['Content-Type'] = 'text/html'
@@ -172,10 +176,11 @@ get '/:id' do
     YAML.load_file(@yaml_file).to_csv
 
   when /ms-excel/
-    file = "public/#{params[:id]}.xls"
+    file = "#{@@datadir}/#{params[:id]}.xls"
     YAML.load_file(@yaml_file).to_xls.write(file) unless File.exists? file # lazy xls generation
-    response['Content-Type'] = 'application/ms-excel'
-    File.open(file).read
+    #response['Content-Type'] = 'application/ms-excel'
+    #File.open(file).read
+    send_file file, :type => 'application/ms-excel'
 
   when /sdfile/
     response['Content-Type'] = 'chemical/x-mdl-sdfile'
@@ -193,7 +198,6 @@ end
 # Get metadata of the dataset
 # @return [application/rdf+xml] Metadata OWL-DL
 get '/:id/metadata' do
-
   metadata = YAML.load_file(@yaml_file).metadata
   
   case @accept
@@ -216,7 +220,7 @@ get %r{/(\d+)/feature/(.*)$} do |id,feature|
 
   @id = id
   @uri = uri @id
-  @yaml_file = "public/#{@id}.yaml"
+  @yaml_file = "#{@@datadir}/#{@id}.yaml"
   feature_uri = url_for("/#{@id}/feature/#{URI.encode(feature)}",:full) # work around  racks internal uri decoding
   metadata = YAML.load_file(@yaml_file).features[feature_uri]
   
@@ -283,7 +287,7 @@ post '/?' do
   input_data = request.env["rack.input"].read
   @id = next_id
   @uri = uri @id
-  @yaml_file = "public/#{@id}.yaml"
+  @yaml_file = "#{@@datadir}/#{@id}.yaml"
   if params.size == 0 and input_data.size==0
     File.open(@yaml_file,"w+"){|f| f.puts OpenTox::Dataset.new(@uri).to_yaml}
     OpenTox::Authorization.check_policy(@uri, @subjectid) if File.exists? @yaml_file
@@ -314,7 +318,7 @@ post '/:id' do
   LOGGER.debug @uri
   response['Content-Type'] = 'text/uri-list'
   task = OpenTox::Task.create("Converting and saving dataset ", @uri) do 
-    FileUtils.rm Dir["public/#{@id}.*"]
+    FileUtils.rm Dir["#{@@datadir}/#{@id}.*"]
     load_dataset @id, params, request.content_type, request.env["rack.input"].read 
     @uri
   end
@@ -325,9 +329,9 @@ end
 # Delete a dataset
 # @return [text/plain] Status message
 delete '/:id' do
-  LOGGER.debug "deleting dataset with id "+@id.to_s
+  LOGGER.debug "deleting dataset with id #{@id}"
   begin
-    FileUtils.rm Dir["public/#{@id}.*"]
+    FileUtils.rm Dir["#{@@datadir}/#{@id}.*"]
     if @subjectid and !File.exists? @yaml_file and @uri
       begin
         res = OpenTox::Authorization.delete_policies_from_uri(@uri, @subjectid)
@@ -346,9 +350,9 @@ end
 # Delete all datasets
 # @return [text/plain] Status message
 delete '/?' do
-  FileUtils.rm Dir["public/*.rdfxml"]
-  FileUtils.rm Dir["public/*.xls"]
-  FileUtils.rm Dir["public/*.yaml"]
+  FileUtils.rm Dir["#{@@datadir}/*.rdfxml"]
+  FileUtils.rm Dir["#{@@datadir}/*.xls"]
+  FileUtils.rm Dir["#{@@datadir}/*.yaml"]
   response['Content-Type'] = 'text/plain'
   "All datasets deleted."
 end
