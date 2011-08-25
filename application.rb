@@ -174,7 +174,7 @@ get '/:id' do
     file = "#{@@datadir}/#{params[:id]}.yaml"
     unless File.exists? file # lazy yaml generation
       dataset = OpenTox::Dataset.from_json File.read(@json_file)
-      File.open(file,"w+") { |f| f.puts dataset.to_rdfxml }
+      File.open(file,"w+") { |f| f.puts dataset.to_yaml }
     end
     send_file file, :type => 'application/x-yaml' 
 
