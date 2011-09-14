@@ -142,7 +142,7 @@ end
 # Get a list of available datasets
 # @return [text/uri-list] List of available datasets
 get '/?' do
-  uri_list = Dir["./#{@@datadir}/*yaml"].collect{|f| File.basename(f.sub(/.yaml/,'')).to_i}.sort.collect{|n| uri n}.join("\n") + "\n" 
+  uri_list = Dir["./#{@@datadir}/*json"].collect{|f| File.basename(f.sub(/.json/,'')).to_i}.sort.collect{|n| uri n}.join("\n") + "\n" 
   case @accept
   when /html/
     response['Content-Type'] = 'text/html'
@@ -180,7 +180,7 @@ get '/:id' do
 
   when /html/
     response['Content-Type'] = 'text/html'
-    OpenTox.text_to_html File.read(@json_file) 
+    OpenTox.text_to_html JSON.pretty_generate(JSON.parse(File.read(@json_file))) 
 
   when "text/csv"
     response['Content-Type'] = 'text/csv'
