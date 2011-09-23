@@ -1,5 +1,5 @@
 require 'rubygems'
-gem "opentox-ruby", "~> 2"
+gem "opentox-ruby", "~> 3"
 require 'opentox-ruby'
 require 'profiler'
 
