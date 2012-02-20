@@ -361,13 +361,13 @@ post '/:id/pcdesc' do
   response['Content-Type'] = 'text/uri-list'
   raise "No PC type given" unless params["pc_type"]
 
-  task = OpenTox::Task.create("PC descriptor calculation for dataset ", @uri) do 
+  task = OpenTox::Task.create("PC descriptor calculation for dataset ", @uri) do |task|
     types = params[:pc_type].split(",")
     if types.include?("joelib")
       Rjb.load(nil,["-Xmx64m"]) 
       s = Rjb::import('JoelibFc')
     end
-    OpenTox::Algorithm.pc_descriptors( { :dataset_uri => @uri, :pc_type => params[:pc_type], :rjb => s } )
+    OpenTox::Algorithm.pc_descriptors( { :dataset_uri => @uri, :pc_type => params[:pc_type], :rjb => s, :task => task } )
   end
   raise OpenTox::ServiceUnavailableError.newtask.uri+"\n" if task.status == "Cancelled"
   halt 202,task.uri.to_s+"\n"
