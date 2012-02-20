@@ -1,7 +1,19 @@
+ENV["JAVA_HOME"] = "/usr/lib/jvm/java-6-sun" unless ENV["JAVA_HOME"]
+ENV["JOELIB2"] = File.join File.expand_path(File.dirname(__FILE__)),"java"
+deps = []
+deps << "#{ENV["JAVA_HOME"]}/lib/tools.jar"
+deps << "#{ENV["JAVA_HOME"]}/lib/classes.jar"
+deps << "#{ENV["JOELIB2"]}"
+jars = Dir[ENV["JOELIB2"]+"/*.jar"].collect {|f| File.expand_path(f) }
+deps = deps + jars
+ENV["CLASSPATH"] = deps.join(":")
+
+
 require 'rubygems'
 gem "opentox-ruby", "~> 3"
 require 'opentox-ruby'
 require 'profiler'
+require 'rjb'
 
 set :lock, true
 
@@ -339,6 +351,29 @@ post '/:id' do
   raise OpenTox::ServiceUnavailableError.newtask.uri+"\n" if task.status == "Cancelled"
   halt 202,task.uri.to_s+"\n"
 end
+
+
+# Create PC descriptors
+#
+# @param [String] pc_type
+# @return [text/uri-list] Task ID 
+post '/:id/pcdesc' do
+  response['Content-Type'] = 'text/uri-list'
+  raise "No PC type given" unless params["pc_type"]
+
+  task = OpenTox::Task.create("PC descriptor calculation for dataset ", @uri) do 
+    types = params[:pc_type].split(",")
+    if types.include?("joelib")
+      Rjb.load(nil,["-Xmx64m"]) 
+      s = Rjb::import('JoelibFc')
+    end
+    OpenTox::Algorithm.pc_descriptors( { :dataset_uri => @uri, :pc_type => params[:pc_type], :rjb => s } )
+  end
+  raise OpenTox::ServiceUnavailableError.newtask.uri+"\n" if task.status == "Cancelled"
+  halt 202,task.uri.to_s+"\n"
+end
+
+
 
 # Delete a dataset
 # @return [text/plain] Status message
