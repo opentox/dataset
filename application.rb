@@ -340,6 +340,27 @@ post '/:id' do
   halt 202,task.uri.to_s+"\n"
 end
 
+# Deletes datasets that have been created by a crossvalidatoin that does not exist anymore
+# (This can happen if a crossvalidation fails unexpectedly)
+delete '/cleanup' do
+  Dir["./#{@@datadir}/*json"].each do |file|
+    dataset = OpenTox::Dataset.from_json File.read(file)
+    if dataset.metadata[DC.creator] && dataset.metadata[DC.creator] =~ /crossvalidation\/[0-9]/
+      begin
+        cv = OpenTox::Crossvalidation.find(dataset.metadata[DC.creator],@subjectid)
+        raise unless cv
+      rescue
+        LOGGER.debug "deleting #{dataset.uri}, crossvalidation missing: #{dataset.metadata[DC.creator]}"
+        begin
+          dataset.delete @subjectid
+        rescue
+        end
+      end
+    end 
+  end
+  "cleanup done"   
+end
+
 # Delete a dataset
 # @return [text/plain] Status message
 delete '/:id' do
