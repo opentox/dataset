@@ -19,11 +19,24 @@ set :lock, true
 
 @@datadir = "data"
 
+@@idfile_path = @@datadir+"/id" 
+unless File.exist?(@@idfile_path)
+  id = Dir["./#{@@datadir}/*json"].collect{|f| File.basename(f.sub(/.json/,'')).to_i}.sort.last
+  id = 0 if id.nil?
+  open(@@idfile_path,"w") do |f|
+    f.puts(id)
+  end
+end
+
 helpers do
   def next_id
-	  id = Dir["./#{@@datadir}/*json"].collect{|f| File.basename(f.sub(/.json/,'')).to_i}.sort.last
-	  id = 0 if id.nil?
-	  id + 1
+    open(@@idfile_path, "r+") do |f|
+      f.flock(File::LOCK_EX)
+      @id = f.gets.to_i + 1
+      f.rewind
+      f.print @id
+    end
+    return @id
   end
 
   def uri(id)
