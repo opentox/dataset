@@ -50,7 +50,7 @@ helpers do
     raise "store subject-id in dataset-object, not in params" if params.has_key?(:subjectid) and @subjectid==nil
 
     content_type = "application/rdf+xml" if content_type.nil?
-    dataset = OpenTox::Dataset.new(nil, @subjectid) 
+    dataset = OpenTox::Dataset.new(@uri, @subjectid) 
 
     case content_type
 
