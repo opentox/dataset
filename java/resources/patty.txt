@@ -1,4 +1,0 @@
-O=C         hbacceptor1
-a           aromat
-c1ccccc1    benzol
-[Cl;Br;I]   hal 
