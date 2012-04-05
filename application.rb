@@ -49,6 +49,9 @@ helpers do
     when /json/
       dataset.load_json(input_data)
 
+    when "text/csv"
+      dataset.load_csv(input_data, @subjectid)
+
     when /application\/rdf\+xml/
       dataset.load_rdfxml(input_data, @subjectid)
          
