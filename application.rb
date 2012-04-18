@@ -2,6 +2,7 @@ require 'rubygems'
 gem "opentox-ruby", "~> 3"
 require 'opentox-ruby'
 require 'profiler'
+require 'rjb'
 
 set :lock, true
 
@@ -47,6 +48,9 @@ helpers do
 
     when /json/
       dataset.load_json(input_data)
+
+    when "text/csv"
+      dataset.load_csv(input_data, @subjectid)
 
     when /application\/rdf\+xml/
       dataset.load_rdfxml(input_data, @subjectid)
@@ -352,6 +356,7 @@ post '/:id' do
   raise OpenTox::ServiceUnavailableError.newtask.uri+"\n" if task.status == "Cancelled"
   halt 202,task.uri.to_s+"\n"
 end
+
 
 # Deletes datasets that have been created by a crossvalidatoin that does not exist anymore
 # (This can happen if a crossvalidation fails unexpectedly)
