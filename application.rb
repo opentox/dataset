@@ -185,7 +185,7 @@ get '/:id' do
     send_file file, :type => 'application/rdf+xml'
 
   when /json/
-    send_file @json_file, :type => 'application/x-yaml' 
+    send_file @json_file, :type => 'application/json' 
 
   when /yaml/
     file = "#{@@datadir}/#{params[:id]}.yaml"
