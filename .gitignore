@@ -1,3 +1,6 @@
+.buildpath
+.loadpath
+.project
 api_key.rb
 *.sqlite3
 tmp/*

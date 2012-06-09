@@ -113,6 +113,88 @@ helpers do
     dataset.features.keys.each { |f| dataset.features[f][OT.hasSource] = dataset.metadata[OT.hasSource] unless dataset.features[f][OT.hasSource]}
     File.open("#{@@datadir}/#{@id}.json","w+"){|f| f.puts dataset.to_json}
   end
+  
+  def to_arff(dataset, subjectid=nil, features=nil )
+          
+    LOGGER.debug "convert dataset to arff #{dataset.uri}"
+          
+    # count duplicates
+    num_compounds = {}
+    dataset.features.keys.each do |f|
+      dataset.compounds.each do |c|
+        if dataset.data_entries[c]
+          val = dataset.data_entries[c][f]
+          size = val==nil ? 1 : val.size
+          num_compounds[c] = num_compounds[c]==nil ? size : [num_compounds[c],size].max
+        else
+          num_compounds[c] = 1
+        end
+      end
+    end  
+    
+    puts "found duplicates"
+    
+    # use either all, or the provided features, sorting is important as col-index := features
+    if features
+      features.sort!
+    else
+      features = dataset.features.keys.sort
+    end
+    compounds = []
+    compound_names = []
+    dataset.compounds.each do |c|
+      count = 0
+      num_compounds[c].times do |i|
+        compounds << c
+        compound_names << "#{c}$#{count}"
+        count+=1
+      end
+    end
+    
+    missing = {}
+    
+    arff = "@RELATION #{dataset.uri}\n\n"
+    features.each do |f|
+      numeric = dataset.features[f][RDF.type].to_a.flatten.include?(OT.NumericFeature)
+      #feat = OpenTox::Feature.find(f,subjectid)
+      #numeric = feat.metadata[RDF.type].to_a.flatten.include?(OT.NumericFeature)
+      if numeric
+        arff << "@ATTRIBUTE '#{f}' NUMERIC\n"
+      else
+        # HACK for binary 0,1 features without accept values (as returned by fminer):
+        # set missing value to 0 instead ?
+        # set accept value to [0,1]
+        accept_values = dataset.accept_values(f)
+        missing[f] = "0" if accept_values==nil
+        arff << "@ATTRIBUTE '#{f}' {#{(accept_values==nil ? [0,1] : accept_values).join(",")}}\n"
+      end
+    end
+    
+    puts "found feature types"
+
+    arff << "\n@DATA\n"
+    
+    dataset.compounds.each do |c|
+      num_compounds[c].times do |i|
+        c_values = []
+        features.each do |f|
+          accept_values = 
+          if dataset.data_entries[c]
+            val = dataset.data_entries[c][f]
+            v = val==nil ? "" : val[i].to_s
+          else
+            raise "wtf" if i>0
+            v = ""
+          end
+          v = (missing[f]==nil ? "?" : missing[f]) if v.size()==0
+          c_values << v
+        end
+        arff << "#{c_values.join(",")}\n"
+      end
+    end
+    arff
+  end
+      
 end
 
 before do
@@ -170,6 +252,19 @@ get '/?' do
   end
 end
 
+post '/:id/rdf' do 
+  response['Content-Type'] = 'text/uri-list'
+  task = OpenTox::Task.create("Converting dataset to rdf ", @uri) do 
+    file = "#{@@datadir}/#{params[:id]}.rdfxml"
+    unless File.exists? file # lazy rdfxml generation
+      dataset = OpenTox::Dataset.from_json File.read(@json_file)
+      File.open(file,"w+") { |f| f.puts dataset.to_rdfxml }
+    end
+    @uri
+  end
+  return_task task
+end
+
 # Get a dataset representation
 # @param [Header] Accept one of `application/rdf+xml, application-x-yaml, text/csv, application/ms-excel` (default application/rdf+xml)
 # @return [application/rdf+xml, application-x-yaml, text/csv, application/ms-excel] Dataset representation
@@ -187,6 +282,14 @@ get '/:id' do
   when /json/
     send_file @json_file, :type => 'application/x-yaml' 
 
+  when /arff/
+    file = "#{@@datadir}/#{params[:id]}.arff"
+    unless File.exists? file # lazy yaml generation
+      dataset = OpenTox::Dataset.from_json File.read(@json_file)
+      File.open(file,"w+") { |f| f.puts to_arff(dataset) }
+    end
+    send_file file, :type => 'application/x-yaml' 
+    
   when /yaml/
     file = "#{@@datadir}/#{params[:id]}.yaml"
     unless File.exists? file # lazy yaml generation
