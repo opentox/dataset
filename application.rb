@@ -132,7 +132,7 @@ helpers do
       end
     end  
     
-    puts "found duplicates"
+    #puts "found duplicates"
     
     # use either all, or the provided features, sorting is important as col-index := features
     if features
@@ -170,7 +170,7 @@ helpers do
       end
     end
     
-    puts "found feature types"
+    #puts "found feature types"
 
     arff << "\n@DATA\n"
     
