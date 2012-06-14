@@ -1,6 +1,4 @@
-api_key.rb
-*.sqlite3
-tmp/*
-log/*
-public/*
-data/*
+*.gem
+.bundle
+Gemfile.lock
+pkg/*
