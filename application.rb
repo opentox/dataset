@@ -1,3 +1,31 @@
+module OpenTox
+  class Application < Service
+
+    # Get metadata of the dataset
+    # @return [application/rdf+xml] Metadata OWL-DL
+    get '/:id/metadata' do
+    end
+
+    # Get a dataset feature
+    # @param [Header] Accept one of `application/rdf+xml or application-x-yaml` (default application/rdf+xml)
+    # @return [application/rdf+xml,application/x-yaml] Feature metadata 
+    get %r{/(\d+)/feature/(.*)$} do |id,feature|
+    end
+
+    # Get a list of all features
+    # @param [Header] Accept one of `application/rdf+xml, application-x-yaml, text/uri-list` (default application/rdf+xml)
+    # @return [application/rdf+xml, application-x-yaml, text/uri-list] Feature list 
+    get '/:id/features' do
+    end
+
+    # Get a list of all compounds
+    # @return [text/uri-list] Feature list 
+    get '/:id/compounds' do
+    end
+  end
+end
+
+=begin
 require 'rubygems'
 gem "opentox-ruby", "~> 3"
 require 'opentox-ruby'
@@ -410,3 +438,4 @@ delete '/?' do
   response['Content-Type'] = 'text/plain'
   "All datasets deleted."
 end
+=end
