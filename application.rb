@@ -111,8 +111,68 @@ helpers do
 
     dataset.uri = @uri # update uri (also in metdata)
     dataset.features.keys.each { |f| dataset.features[f][OT.hasSource] = dataset.metadata[OT.hasSource] unless dataset.features[f][OT.hasSource]}
-    File.open("#{@@datadir}/#{@id}.json","w+"){|f| f.puts dataset.to_json}
+    zip_dataset( dataset )
   end
+  
+  def zip_dataset( dataset )
+    raise unless @id
+    LOGGER.debug "zipping #{@@datadir}/#{@id}.json.zip"
+    File.open("#{@@datadir}/#{@id}.json","w+"){|f| f.puts dataset.to_json}
+    output = IO.popen("/usr/bin/zip -D #{@@datadir}/#{@id}.json.zip #{@@datadir}/#{@id}.json")
+    $stderr.puts output.readlines
+    output.close
+    #File.delete("#{@@datadir}/#{@id}.json")
+  end
+
+  def unzip_dataset()
+    if !File.exist?("#{@@datadir}/#{@id}.json")
+      LOGGER.debug "unzipping #{@@datadir}/#{@id}.json.zip"
+      output = IO.popen("/usr/bin/unzip -n #{@json_zip_file} -d #{@@datadir}")
+      $stderr.puts output.readlines
+      output.close
+      raise "could not unzip file" unless File.exist?("#{@@datadir}/#{@id}.json")
+    end
+    dataset = OpenTox::Dataset.from_json File.read("#{@@datadir}/#{@id}.json")
+    #File.delete("#{@@datadir}/#{@id}.json")
+    dataset
+  end
+  
+  def unzip_json()
+    if !File.exist?("#{@@datadir}/#{@id}.json")
+      LOGGER.debug "unzipping #{@@datadir}/#{@id}.json.zip"
+      output = IO.popen("/usr/bin/unzip -n #{@json_zip_file} -d #{@@datadir}")
+      $stderr.puts output.readlines
+      output.close
+      raise "could not unzip file #{@json_zip_file} to #{@@datadir}/#{@id}.json" unless File.exist?("#{@@datadir}/#{@id}.json")
+    end
+    content = File.read("#{@@datadir}/#{@id}.json")
+    #File.delete("#{@@datadir}/#{@id}.json")
+    content
+  end
+
+  def zip_arff( arff )
+    LOGGER.debug "zipping #{@@datadir}/#{@id}.arff.zip"
+    file = "#{@@datadir}/#{@id}.arff"
+    File.open(file,"w+") { |f| f.puts arff }
+    output = IO.popen("/usr/bin/zip -D #{@@datadir}/#{@id}.arff.zip #{@@datadir}/#{@id}.arff")
+    $stderr.puts output.readlines
+    output.close
+    #File.delete("#{@@datadir}/#{@id}.arff")
+  end
+  
+  def unzip_arff()
+    if !File.exist?("#{@@datadir}/#{@id}.arff")
+      LOGGER.debug "unzipping #{@@datadir}/#{@id}.arff.zip"
+      output = IO.popen("/usr/bin/unzip -n #{@@datadir}/#{@id}.arff.zip -d #{@@datadir}")
+      $stderr.puts output.readlines
+      output.close
+      raise "could not unzip file" unless File.exist?("#{@@datadir}/#{@id}.arff")
+    end
+    content = File.read("#{@@datadir}/#{@id}.arff")
+    #File.delete("#{@@datadir}/#{@id}.arff")
+    content
+  end
+    
   
   def to_arff(dataset, subjectid=nil, features=nil )
           
@@ -206,8 +266,8 @@ before do
     @id = @id.to_s.sub(/\//,'').to_i
 
     @uri = uri @id
-    @json_file = "#{@@datadir}/#{@id}.json"
-    raise OpenTox::NotFoundError.new "Dataset #{@id} not found." unless File.exists? @json_file
+    @json_zip_file = "#{@@datadir}/#{@id}.json.zip"
+    raise OpenTox::NotFoundError.new "Dataset #{@id} not found." unless File.exists? @json_zip_file
 
     extension = File.extname(request.path_info)
     unless extension.empty?
@@ -241,7 +301,7 @@ end
 # Get a list of available datasets
 # @return [text/uri-list] List of available datasets
 get '/?' do
-  uri_list = Dir["./#{@@datadir}/*json"].collect{|f| File.basename(f.sub(/.json/,'')).to_i}.sort.collect{|n| uri n}.join("\n") + "\n" 
+  uri_list = Dir["./#{@@datadir}/*json.zip"].collect{|f| File.basename(f.sub(/.json.zip/,'')).to_i}.sort.collect{|n| uri n}.join("\n") + "\n" 
   case @accept
   when /html/
     response['Content-Type'] = 'text/html'
@@ -252,18 +312,18 @@ get '/?' do
   end
 end
 
-post '/:id/rdf' do 
-  response['Content-Type'] = 'text/uri-list'
-  task = OpenTox::Task.create("Converting dataset to rdf ", @uri) do 
-    file = "#{@@datadir}/#{params[:id]}.rdfxml"
-    unless File.exists? file # lazy rdfxml generation
-      dataset = OpenTox::Dataset.from_json File.read(@json_file)
-      File.open(file,"w+") { |f| f.puts dataset.to_rdfxml }
-    end
-    @uri
-  end
-  return_task task
-end
+#post '/:id/rdf' do 
+#  response['Content-Type'] = 'text/uri-list'
+#  task = OpenTox::Task.create("Converting dataset to rdf ", @uri) do 
+#    file = "#{@@datadir}/#{params[:id]}.rdfxml"
+#    unless File.exists? file # lazy rdfxml generation
+#      dataset = OpenTox::Dataset.from_json File.read(@json_file)
+#      File.open(file,"w+") { |f| f.puts dataset.to_rdfxml }
+#    end
+#    @uri
+#  end
+#  return_task task
+#end
 
 # Get a dataset representation
 # @param [Header] Accept one of `application/rdf+xml, application-x-yaml, text/csv, application/ms-excel` (default application/rdf+xml)
@@ -274,46 +334,55 @@ get '/:id' do
   when /rdf/ # redland sends text/rdf instead of application/rdf+xml
     file = "#{@@datadir}/#{params[:id]}.rdfxml"
     unless File.exists? file # lazy rdfxml generation
-      dataset = OpenTox::Dataset.from_json File.read(@json_file)
+      #dataset = OpenTox::Dataset.from_json File.read(@json_file)
+      dataset = unzip_dataset()
       File.open(file,"w+") { |f| f.puts dataset.to_rdfxml }
     end
     send_file file, :type => 'application/rdf+xml'
 
   when /json/
-    send_file @json_file, :type => 'application/x-yaml' 
+    #send_file @json_file, :type => 'application/x-yaml' 
+    response['Content-Type'] = 'application/x-json'
+    unzip_json()
 
   when /arff/
-    file = "#{@@datadir}/#{params[:id]}.arff"
-    unless File.exists? file # lazy yaml generation
-      dataset = OpenTox::Dataset.from_json File.read(@json_file)
-      File.open(file,"w+") { |f| f.puts to_arff(dataset) }
+    response['Content-Type'] = 'application/x-arff'
+    unless File.exists? "#{@@datadir}/#{params[:id]}.arff.zip"
+      arff_content = to_arff(unzip_dataset())
+      zip_arff(arff_content)
+      arff_content
+    else
+      unzip_arff()
     end
-    send_file file, :type => 'application/x-yaml' 
     
   when /yaml/
     file = "#{@@datadir}/#{params[:id]}.yaml"
     unless File.exists? file # lazy yaml generation
-      dataset = OpenTox::Dataset.from_json File.read(@json_file)
+      #dataset = OpenTox::Dataset.from_json File.read(@json_file)
+      dataset = unzip_dataset()
       File.open(file,"w+") { |f| f.puts dataset.to_yaml }
     end
     send_file file, :type => 'application/x-yaml' 
 
   when /html/
     response['Content-Type'] = 'text/html'
-    OpenTox.text_to_html JSON.pretty_generate(JSON.parse(File.read(@json_file))) 
+    OpenTox.text_to_html JSON.pretty_generate(JSON.parse(unzip_json())) 
 
   when "text/csv"
     response['Content-Type'] = 'text/csv'
-    OpenTox::Dataset.from_json(File.read(@json_file)).to_csv
+    #OpenTox::Dataset.from_json(File.read(@json_file)).to_csv
+    unzip_dataset().to_csv
 
   when /ms-excel/
     file = "#{@@datadir}/#{params[:id]}.xls"
-    OpenTox::Dataset.from_json(File.read(@json_file)).to_xls.write(file) unless File.exists? file # lazy xls generation
+    #OpenTox::Dataset.from_json(File.read(@json_file)).to_xls.write(file) unless File.exists? file # lazy xls generation
+    unzip_dataset().to_xls.write(file) unless File.exists? file # lazy xls generation
     send_file file, :type => 'application/ms-excel'
 
   when /sdfile/
     response['Content-Type'] = 'chemical/x-mdl-sdfile'
-    OpenTox::Dataset.from_json(File.read(@json_file)).to_sdf
+    #OpenTox::Dataset.from_json(File.read(@json_file)).to_sdf
+    unzip_dataset().to_sdf
 
 #  when /uri-list/
 #    response['Content-Type'] = 'text/uri-list'
@@ -327,7 +396,7 @@ end
 # Get metadata of the dataset
 # @return [application/rdf+xml] Metadata OWL-DL
 get '/:id/metadata' do
-  metadata = OpenTox::Dataset.from_json(File.read(@json_file)).metadata
+  metadata = unzip_dataset().metadata
   
   case @accept
   when /rdf/ # redland sends text/rdf instead of application/rdf+xml
@@ -349,9 +418,10 @@ get %r{/(\d+)/feature/(.*)$} do |id,feature|
 
   @id = id
   @uri = uri @id
-  @json_file = "#{@@datadir}/#{@id}.json"
+  #@json_file = "#{@@datadir}/#{@id}.json"
+  @json_zip_file = "#{@@datadir}/#{@id}.json.zip"
   feature_uri = url_for("/#{@id}/feature/#{URI.encode(feature)}",:full) # work around  racks internal uri decoding
-  metadata = OpenTox::Dataset.from_json(File.read(@json_file)).features[feature_uri]
+  metadata = unzip_dataset().features[feature_uri]
   
   case @accept
   when /rdf/ # redland sends text/rdf instead of application/rdf+xml
@@ -374,7 +444,7 @@ end
 # @return [application/rdf+xml, application-x-yaml, text/uri-list] Feature list 
 get '/:id/features' do
 
-  features = OpenTox::Dataset.from_json(File.read(@json_file)).features
+  features = unzip_dataset().features
 
   case @accept
   when /rdf/ # redland sends text/rdf instead of application/rdf+xml
@@ -398,7 +468,7 @@ end
 # @return [text/uri-list] Feature list 
 get '/:id/compounds' do
   response['Content-Type'] = 'text/uri-list'
-  OpenTox::Dataset.from_json(File.read(@json_file)).compounds.join("\n") + "\n"
+  unzip_dataset().compounds.join("\n") + "\n"
 end
 
 # Create a new dataset.
@@ -422,15 +492,19 @@ post '/?' do
   input_data = request.env["rack.input"].read
   @id = next_id
   @uri = uri @id
-  @json_file = "#{@@datadir}/#{@id}.json"
+  #@json_file = "#{@@datadir}/#{@id}.json"
+  @json_zip_file = "#{@@datadir}/#{@id}.json.zip"
   if params.size == 0 and input_data.size==0
-    File.open(@json_file,"w+"){|f| f.puts OpenTox::Dataset.new(@uri).to_json}
-    OpenTox::Authorization.check_policy(@uri, @subjectid) if File.exists? @json_file
+    #File.open(@json_file,"w+"){|f| f.puts OpenTox::Dataset.new(@uri).to_json}
+    zip_dataset(OpenTox::Dataset.new(@uri))      
+    #OpenTox::Authorization.check_policy(@uri, @subjectid) if File.exists? @json_file
+    OpenTox::Authorization.check_policy(@uri, @subjectid) if File.exists? @json_zip_file
     @uri
   else
     task = OpenTox::Task.create("Converting and saving dataset ", @uri) do 
       load_dataset @id, params, request.content_type, input_data 
-      OpenTox::Authorization.check_policy(@uri, @subjectid) if File.exists? @json_file
+      #OpenTox::Authorization.check_policy(@uri, @subjectid) if File.exists? @json_file
+      OpenTox::Authorization.check_policy(@uri, @subjectid) if File.exists? @json_zip_file
       @uri
     end
     raise OpenTox::ServiceUnavailableError.newtask.uri+"\n" if task.status == "Cancelled"
@@ -488,7 +562,8 @@ delete '/:id' do
   LOGGER.debug "deleting dataset with id #{@id}"
   begin
     FileUtils.rm Dir["#{@@datadir}/#{@id}.*"]
-    if @subjectid and !File.exists? @json_file and @uri
+    #if @subjectid and !File.exists? @json_file and @uri
+    if @subjectid and !File.exists? @json_zip_file and @uri
       begin
         res = OpenTox::Authorization.delete_policies_from_uri(@uri, @subjectid)
         LOGGER.debug "Policy deleted for Dataset URI: #{@uri} with result: #{res}"
