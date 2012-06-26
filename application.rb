@@ -127,7 +127,7 @@ helpers do
   def unzip_dataset()
     if !File.exist?("#{@@datadir}/#{@id}.json")
       LOGGER.debug "unzipping #{@@datadir}/#{@id}.json.zip"
-      output = IO.popen("/usr/bin/unzip -n #{@json_zip_file} -d #{@@datadir}")
+      output = IO.popen("/usr/bin/unzip -nj #{@json_zip_file} -d #{@@datadir}")
       $stderr.puts output.readlines
       output.close
       raise "could not unzip file" unless File.exist?("#{@@datadir}/#{@id}.json")
@@ -140,7 +140,7 @@ helpers do
   def unzip_json()
     if !File.exist?("#{@@datadir}/#{@id}.json")
       LOGGER.debug "unzipping #{@@datadir}/#{@id}.json.zip"
-      output = IO.popen("/usr/bin/unzip -n #{@json_zip_file} -d #{@@datadir}")
+      output = IO.popen("/usr/bin/unzip -nj #{@json_zip_file} -d #{@@datadir}")
       $stderr.puts output.readlines
       output.close
       raise "could not unzip file #{@json_zip_file} to #{@@datadir}/#{@id}.json" unless File.exist?("#{@@datadir}/#{@id}.json")
@@ -163,7 +163,7 @@ helpers do
   def unzip_arff()
     if !File.exist?("#{@@datadir}/#{@id}.arff")
       LOGGER.debug "unzipping #{@@datadir}/#{@id}.arff.zip"
-      output = IO.popen("/usr/bin/unzip -n #{@@datadir}/#{@id}.arff.zip -d #{@@datadir}")
+      output = IO.popen("/usr/bin/unzip -nj #{@@datadir}/#{@id}.arff.zip -d #{@@datadir}")
       $stderr.puts output.readlines
       output.close
       raise "could not unzip file" unless File.exist?("#{@@datadir}/#{@id}.arff")
@@ -422,7 +422,6 @@ end
     array << ["compounds", dataset.compounds]
     array << ["features", dataset.features]
     array << ["values", dataset.data_entries]
-      
     
     case @accept
     when /html/ # redland sends text/rdf instead of application/rdf+xml
