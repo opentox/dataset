@@ -1,4 +1,5 @@
 SERVICE = "dataset"
 require 'bundler'
 Bundler.require
-run OpenTox::Service
+require './application.rb'
+run OpenTox::Application
