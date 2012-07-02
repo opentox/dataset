@@ -305,12 +305,12 @@ post '/?' do
   @json_file = "#{@@datadir}/#{@id}.json"
   if params.size == 0 and input_data.size==0
     File.open(@json_file,"w+"){|f| f.puts OpenTox::Dataset.new(@uri).to_json}
-    OpenTox::Authorization.check_policy(@uri, @subjectid) if File.exists? @json_file
+    #OpenTox::Authorization.check_policy(@uri, @subjectid) if File.exists? @json_file
     @uri
   else
     task = OpenTox::Task.create("Converting and saving dataset ", @uri) do 
       load_dataset @id, params, request.content_type, input_data 
-      OpenTox::Authorization.check_policy(@uri, @subjectid) if File.exists? @json_file
+      #OpenTox::Authorization.check_policy(@uri, @subjectid) if File.exists? @json_file
       @uri
     end
     raise OpenTox::ServiceUnavailableError.newtask.uri+"\n" if task.status == "Cancelled"
@@ -346,14 +346,14 @@ delete '/:id' do
   LOGGER.debug "deleting dataset with id #{@id}"
   begin
     FileUtils.rm Dir["#{@@datadir}/#{@id}.*"]
-    if @subjectid and !File.exists? @json_file and @uri
-      begin
-        res = OpenTox::Authorization.delete_policies_from_uri(@uri, @subjectid)
-        LOGGER.debug "Policy deleted for Dataset URI: #{@uri} with result: #{res}"
-      rescue
-        LOGGER.warn "Policy delete error for Dataset URI: #{@uri}"
-      end
-    end
+    #if @subjectid and !File.exists? @json_file and @uri
+    #  begin
+    #    #res = OpenTox::Authorization.delete_policies_from_uri(@uri, @subjectid)
+    #    #LOGGER.debug "Policy deleted for Dataset URI: #{@uri} with result: #{res}"
+    #  rescue
+    #    #LOGGER.warn "Policy delete error for Dataset URI: #{@uri}"
+    #  end
+    #end
     response['Content-Type'] = 'text/plain'
     "Dataset #{@id} deleted."
   rescue
