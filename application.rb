@@ -421,7 +421,6 @@ end
     array << ["metadata", dataset.metadata]
     array << ["compounds", dataset.compounds]
     array << ["features", dataset.features]
-    array << ["values", dataset.data_entries]
     
     case @accept
     when /html/ # redland sends text/rdf instead of application/rdf+xml
@@ -432,6 +431,28 @@ end
       metadata.to_yaml
     end
   end
+  
+  get '/:id/info_values' do
+      dataset = unzip_dataset()
+      
+      array = []
+      array << @uri
+      array << "#{dataset.compounds.size} compounds"
+      array << "#{dataset.features.size} features"
+      array << ["metadata", dataset.metadata]
+      array << ["compounds", dataset.compounds]
+      array << ["features", dataset.features]
+      array << ["values", dataset.data_entries]
+            
+      case @accept
+      when /html/ # redland sends text/rdf instead of application/rdf+xml
+        response['Content-Type'] = 'text/html'
+        OpenTox.text_to_html array.to_yaml
+      else
+        response['Content-Type'] = 'application/x-yaml'
+        metadata.to_yaml
+      end
+    end  
 
 # Get a dataset feature
 # @param [Header] Accept one of `application/rdf+xml or application-x-yaml` (default application/rdf+xml)
