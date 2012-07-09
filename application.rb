@@ -555,6 +555,32 @@ post '/?' do
   end
 end
 
+post '/merge' do
+  LOGGER.info "merging datasets #{params.inspect}"
+  raise "dataset1 or dataset2 is missing" unless params["dataset1"] and params["dataset2"]
+  task = OpenTox::Task.create("Merging datasets", @uri) do 
+    dataset1 = OpenTox::Dataset.find(params["dataset1"])
+    dataset2 = OpenTox::Dataset.find(params["dataset2"])
+    features1 = params.has_key?("features1") ? params["features1"].split(",") : nil
+    features2 = params.has_key?("features2") ? params["features2"].split(",") : nil
+    compounds1 = params.has_key?("compounds1") ? params["compounds1"].split(",") : nil
+    compounds2 = params.has_key?("compounds2") ? params["compounds2"].split(",") : nil
+    OpenTox::Dataset.merge(dataset1,dataset2,{},@subjectid,features1,features2,compounds1,compounds2).uri
+  end
+  return_task task
+end
+
+post '/filter' do
+  LOGGER.info "filtering dataset #{params.inspect}"
+  raise "dataset_uri is missing" unless params["dataset_uri"]
+  task = OpenTox::Task.create("Filtering dataset", @uri) do 
+    dataset = OpenTox::Dataset.find(params["dataset_uri"])
+    dataset.filter( params.has_key?("features") ? params["features"].split(",") : nil ).uri
+  end
+  return_task task
+end
+
+
 # Save a dataset, will overwrite all existing data
 #
 # Data can be submitted either
@@ -576,6 +602,7 @@ post '/:id' do
   raise OpenTox::ServiceUnavailableError.newtask.uri+"\n" if task.status == "Cancelled"
   halt 202,task.uri.to_s+"\n"
 end
+
 
 
 # Deletes datasets that have been created by a crossvalidatoin that does not exist anymore
