@@ -1,5 +1,9 @@
 2012-07-12
   * cleanup method deletes datasets that have been created by a crossvalidatoin that does not exist anymore
   * switch to opentox-ruby version 4.0.0
+2012-04-25  
+  * fix content-type for json
 2012-04-20
 	* Moved pc descriptors to algorithm
+2012-03-20
+  * Fixed dataset uri bug in load_dataset
