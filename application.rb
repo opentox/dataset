@@ -1,17 +1,31 @@
 require 'rubygems'
-gem "opentox-ruby", "~> 3"
+gem "opentox-ruby", "~> 4"
 require 'opentox-ruby'
 require 'profiler'
+require 'rjb'
 
 set :lock, true
 
 @@datadir = "data"
 
+@@idfile_path = @@datadir+"/id"
+unless File.exist?(@@idfile_path)
+  id = Dir["./#{@@datadir}/*json"].collect{|f| File.basename(f.sub(/.json/,'')).to_i}.sort.last
+  id = 0 if id.nil?
+  open(@@idfile_path,"w") do |f|
+    f.puts(id)
+  end
+end
+
 helpers do
   def next_id
-	  id = Dir["./#{@@datadir}/*json"].collect{|f| File.basename(f.sub(/.json/,'')).to_i}.sort.last
-	  id = 0 if id.nil?
-	  id + 1
+    open(@@idfile_path, "r+") do |f|
+      f.flock(File::LOCK_EX)
+      @id = f.gets.to_i + 1
+      f.rewind
+      f.print @id
+    end
+    return @id
   end
 
   def uri(id)
@@ -25,7 +39,7 @@ helpers do
     raise "store subject-id in dataset-object, not in params" if params.has_key?(:subjectid) and @subjectid==nil
 
     content_type = "application/rdf+xml" if content_type.nil?
-    dataset = OpenTox::Dataset.new(nil, @subjectid) 
+    dataset = OpenTox::Dataset.new(@uri, @subjectid)
 
     case content_type
 
@@ -35,9 +49,12 @@ helpers do
     when /json/
       dataset.load_json(input_data)
 
+    when "text/csv"
+      dataset.load_csv(input_data, @subjectid)
+
     when /application\/rdf\+xml/
       dataset.load_rdfxml(input_data, @subjectid)
-         
+
     when "chemical/x-mdl-sdfile"
       dataset.load_sdf(input_data, @subjectid)
 
@@ -132,9 +149,9 @@ before do
      end
     end
   end
-  
+
   # make sure subjectid is not included in params, subjectid is set as member variable
-  params.delete(:subjectid) 
+  params.delete(:subjectid)
 end
 
 ## REST API
@@ -142,7 +159,7 @@ end
 # Get a list of available datasets
 # @return [text/uri-list] List of available datasets
 get '/?' do
-  uri_list = Dir["./#{@@datadir}/*json"].collect{|f| File.basename(f.sub(/.json/,'')).to_i}.sort.collect{|n| uri n}.join("\n") + "\n" 
+  uri_list = Dir["./#{@@datadir}/*json"].collect{|f| File.basename(f.sub(/.json/,'')).to_i}.sort.collect{|n| uri n}.join("\n") + "\n"
   case @accept
   when /html/
     response['Content-Type'] = 'text/html'
@@ -168,7 +185,7 @@ get '/:id' do
     send_file file, :type => 'application/rdf+xml'
 
   when /json/
-    send_file @json_file, :type => 'application/x-yaml' 
+    send_file @json_file, :type => 'application/json'
 
   when /yaml/
     file = "#{@@datadir}/#{params[:id]}.yaml"
@@ -176,11 +193,11 @@ get '/:id' do
       dataset = OpenTox::Dataset.from_json File.read(@json_file)
       File.open(file,"w+") { |f| f.puts dataset.to_yaml }
     end
-    send_file file, :type => 'application/x-yaml' 
+    send_file file, :type => 'application/x-yaml'
 
   when /html/
     response['Content-Type'] = 'text/html'
-    OpenTox.text_to_html JSON.pretty_generate(JSON.parse(File.read(@json_file))) 
+    OpenTox.text_to_html JSON.pretty_generate(JSON.parse(File.read(@json_file)))
 
   when "text/csv"
     response['Content-Type'] = 'text/csv'
@@ -208,7 +225,7 @@ end
 # @return [application/rdf+xml] Metadata OWL-DL
 get '/:id/metadata' do
   metadata = OpenTox::Dataset.from_json(File.read(@json_file)).metadata
-  
+
   case @accept
   when /rdf/ # redland sends text/rdf instead of application/rdf+xml
     response['Content-Type'] = 'application/rdf+xml'
@@ -224,7 +241,7 @@ end
 
 # Get a dataset feature
 # @param [Header] Accept one of `application/rdf+xml or application-x-yaml` (default application/rdf+xml)
-# @return [application/rdf+xml,application/x-yaml] Feature metadata 
+# @return [application/rdf+xml,application/x-yaml] Feature metadata
 get %r{/(\d+)/feature/(.*)$} do |id,feature|
 
   @id = id
@@ -232,7 +249,7 @@ get %r{/(\d+)/feature/(.*)$} do |id,feature|
   @json_file = "#{@@datadir}/#{@id}.json"
   feature_uri = url_for("/#{@id}/feature/#{URI.encode(feature)}",:full) # work around  racks internal uri decoding
   metadata = OpenTox::Dataset.from_json(File.read(@json_file)).features[feature_uri]
-  
+
   case @accept
   when /rdf/ # redland sends text/rdf instead of application/rdf+xml
     response['Content-Type'] = 'application/rdf+xml'
@@ -251,7 +268,7 @@ end
 
 # Get a list of all features
 # @param [Header] Accept one of `application/rdf+xml, application-x-yaml, text/uri-list` (default application/rdf+xml)
-# @return [application/rdf+xml, application-x-yaml, text/uri-list] Feature list 
+# @return [application/rdf+xml, application-x-yaml, text/uri-list] Feature list
 get '/:id/features' do
 
   features = OpenTox::Dataset.from_json(File.read(@json_file)).features
@@ -275,7 +292,7 @@ get '/:id/features' do
 end
 
 # Get a list of all compounds
-# @return [text/uri-list] Feature list 
+# @return [text/uri-list] Feature list
 get '/:id/compounds' do
   response['Content-Type'] = 'text/uri-list'
   OpenTox::Dataset.from_json(File.read(@json_file)).compounds.join("\n") + "\n"
@@ -292,12 +309,12 @@ end
 #   curl -X POST -F "file=@training.csv;type=text/csv" http://webservices.in-silico.ch/dataset
 # @param [Header] Content-type one of `application/x-yaml, application/rdf+xml, multipart/form-data/`
 # @param [BODY] - string with data in selected Content-type
-# @param [optional] file, for file uploads, Content-type should be multipart/form-data, please specify the file type `application/rdf+xml, application-x-yaml, text/csv, application/ms-excel` 
+# @param [optional] file, for file uploads, Content-type should be multipart/form-data, please specify the file type `application/rdf+xml, application-x-yaml, text/csv, application/ms-excel`
 # @return [text/uri-list] Task URI or Dataset URI (empty datasets)
-post '/?' do 
+post '/?' do
 
   response['Content-Type'] = 'text/uri-list'
-  
+
   # it could be that the read function works only once!, store in varible
   input_data = request.env["rack.input"].read
   @id = next_id
@@ -308,8 +325,8 @@ post '/?' do
     OpenTox::Authorization.check_policy(@uri, @subjectid) if File.exists? @json_file
     @uri
   else
-    task = OpenTox::Task.create("Converting and saving dataset ", @uri) do 
-      load_dataset @id, params, request.content_type, input_data 
+    task = OpenTox::Task.create("Converting and saving dataset ", @uri) do
+      load_dataset @id, params, request.content_type, input_data
       OpenTox::Authorization.check_policy(@uri, @subjectid) if File.exists? @json_file
       @uri
     end
@@ -327,17 +344,39 @@ end
 #   curl -X POST -F "file=@training.csv;type=text/csv" http://webservices.in-silico.ch/dataset/1
 # @param [Header] Content-type one of `application/x-yaml, application/rdf+xml, multipart/form-data/`
 # @param [BODY] - string with data in selected Content-type
-# @param [optional] file, for file uploads, Content-type should be multipart/form-data, please specify the file type `application/rdf+xml, application-x-yaml, text/csv, application/ms-excel` 
-# @return [text/uri-list] Task ID 
-post '/:id' do 
+# @param [optional] file, for file uploads, Content-type should be multipart/form-data, please specify the file type `application/rdf+xml, application-x-yaml, text/csv, application/ms-excel`
+# @return [text/uri-list] Task ID
+post '/:id' do
   response['Content-Type'] = 'text/uri-list'
-  task = OpenTox::Task.create("Converting and saving dataset ", @uri) do 
+  task = OpenTox::Task.create("Converting and saving dataset ", @uri) do
     FileUtils.rm Dir["#{@@datadir}/#{@id}.*"]
-    load_dataset @id, params, request.content_type, request.env["rack.input"].read 
+    load_dataset @id, params, request.content_type, request.env["rack.input"].read
     @uri
   end
   raise OpenTox::ServiceUnavailableError.newtask.uri+"\n" if task.status == "Cancelled"
   halt 202,task.uri.to_s+"\n"
+end
+
+
+# Deletes datasets that have been created by a crossvalidatoin that does not exist anymore
+# (This can happen if a crossvalidation fails unexpectedly)
+delete '/cleanup' do
+  Dir["./#{@@datadir}/*json"].each do |file|
+    dataset = OpenTox::Dataset.from_json File.read(file)
+    if dataset.metadata[DC.creator] && dataset.metadata[DC.creator] =~ /crossvalidation\/[0-9]/
+      begin
+        cv = OpenTox::Crossvalidation.find(dataset.metadata[DC.creator],@subjectid)
+        raise unless cv
+      rescue
+        LOGGER.debug "deleting #{dataset.uri}, crossvalidation missing: #{dataset.metadata[DC.creator]}"
+        begin
+          dataset.delete @subjectid
+        rescue
+        end
+      end
+    end
+  end
+  "cleanup done"
 end
 
 # Delete a dataset
