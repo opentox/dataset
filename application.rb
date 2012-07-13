@@ -81,7 +81,6 @@ module OpenTox
 
         # compounds and values
         compound_uris = []
-        data_entry_idx = 0
         table.each_with_index do |values,j|
           values.collect!{|v| v.strip unless v.nil?}
           compound = values.shift
@@ -94,11 +93,11 @@ module OpenTox
             when /InChI/i
               compound_uri = OpenTox::Compound.from_inchi($compound[:uri], URI.decode_www_form_component(compound)).uri
             end
-            @warnings << "Duplicated compound #{compound} at position #{j+2}, entries are accepted, assuming that measurements come from independent experiments." if compound_uris.include? compound_uri
           rescue
             @warnings << "Cannot parse compound #{compound} at position #{j+2}, all entries are ignored."
             next
           end
+          compound_uris << compound_uri
           unless values.size == features.size
             @warnings << "Number of values at position #{j+2} (#{values.size}) is different than header size (#{features.size}), all entries are ignored."
             next
@@ -121,6 +120,11 @@ module OpenTox
 
           end
 
+        end
+        compound_uris.duplicates.each do |uri|
+          positions = []
+          compound_uris.each_with_index{|c,i| positions << i+1 if c == uri}
+          @warnings << "Duplicated compound #{uri} at rows #{positions.join(', ')}. Entries are accepted, assuming that measurements come from independent experiments." 
         end
 
         ntriples << "<#{@uri}> <#{RDF::OT.Warnings}> \"#{@warnings.join('\n')}\" ."
@@ -295,16 +299,15 @@ module OpenTox
     # Get a list of all compounds
     # @return [text/uri-list] Feature list 
     get '/dataset/:id/compounds' do
-      accept = request.env['HTTP_ACCEPT']
-      case accept
+      case @accept
       when "application/rdf+xml", "text/turtle", "text/plain"
         sparql = "CONSTRUCT {?s ?p ?o.} FROM <#{@uri}> WHERE {?s <#{RDF.type}> <#{RDF::OT.Compound}>; ?p ?o. }"
       when "text/uri-list"
         sparql = "SELECT DISTINCT ?s FROM <#{@uri}> WHERE {?s <#{RDF.type}> <#{RDF::OT.Compound}>. }"
       else
-        bad_request_error "'#{accept}' is not a supported content type."
+        bad_request_error "'#{@accept}' is not a supported content type."
       end
-      FourStore.query sparql, accept
+      FourStore.query sparql, @accept
     end
   end
 end
