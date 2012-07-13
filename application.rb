@@ -193,39 +193,43 @@ module OpenTox
       end
 
       def parse_put
-        case @content_type
-        when "text/plain", "text/turtle", "application/rdf+xml" # no conversion needed
-        when "text/csv"
-          @body = from_csv @body
-          @content_type = "text/plain"
-        when "application/vnd.ms-excel"
-          xls = params[:file][:tempfile].path + ".xls"
-          File.rename params[:file][:tempfile].path, xls # roo needs these endings
-          @body = from_csv Excel.new(xls).to_csv
-          @content_type = "text/plain"
-        when "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-          xlsx = params[:file][:tempfile].path + ".xlsx"
-          File.rename params[:file][:tempfile].path, xlsx # roo needs these endings
-          @body = from_csv Excelx.new(xlsx).to_csv
-          @content_type = "text/plain"
-        when "application/vnd.oasis.opendocument.spreadsheet"
-          ods = params[:file][:tempfile].path + ".ods"
-          File.rename params[:file][:tempfile].path, ods # roo needs these endings
-          @body = from_csv Excelx.new(ods).to_csv
-          @content_type = "text/plain"
-  #      when "chemical/x-mdl-sdfile"
-  #        @body = parse_sdf @body
-  #        @content_type = "text/plain"
-        else
-          bad_request_error "#{@content_type} is not a supported content type."
+        task = OpenTox::Task.create $task[:uri], nil, RDF::DC.description => "Dataset upload: #{@uri}" do
+          case @content_type
+          when "text/plain", "text/turtle", "application/rdf+xml" # no conversion needed
+          when "text/csv"
+            @body = from_csv @body
+            @content_type = "text/plain"
+          when "application/vnd.ms-excel"
+            xls = params[:file][:tempfile].path + ".xls"
+            File.rename params[:file][:tempfile].path, xls # roo needs these endings
+            @body = from_csv Excel.new(xls).to_csv
+            @content_type = "text/plain"
+          when "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            xlsx = params[:file][:tempfile].path + ".xlsx"
+            File.rename params[:file][:tempfile].path, xlsx # roo needs these endings
+            @body = from_csv Excelx.new(xlsx).to_csv
+            @content_type = "text/plain"
+          when "application/vnd.oasis.opendocument.spreadsheet"
+            ods = params[:file][:tempfile].path + ".ods"
+            File.rename params[:file][:tempfile].path, ods # roo needs these endings
+            @body = from_csv Excelx.new(ods).to_csv
+            @content_type = "text/plain"
+    #      when "chemical/x-mdl-sdfile"
+    #        @body = parse_sdf @body
+    #        @content_type = "text/plain"
+          else
+            bad_request_error "#{@content_type} is not a supported content type."
+          end
+          FourStore.put @uri, @body, @content_type
+          if params[:file]
+            nt = "<#{@uri}> <#{RDF::DC.title}> \"#{params[:file][:filename]}\".\n<#{uri}> <#{RDF::OT.hasSource}> \"#{params[:file][:filename]}\"."
+            FourStore.post(uri, nt, "text/plain")
+          end
+          @uri
         end
-        FourStore.put @uri, @body, @content_type
-        if params[:file]
-          nt = "<#{@uri}> <#{RDF::DC.title}> \"#{params[:file][:filename]}\".\n<#{uri}> <#{RDF::OT.hasSource}> \"#{params[:file][:filename]}\"."
-          FourStore.post(uri, nt, "text/plain")
-        end
+        response['Content-Type'] = "text/uri-list"
+        task.uri
       end
-
     end
 
     before "/#{SERVICE}/:id/:property" do
@@ -234,11 +238,8 @@ module OpenTox
 
     # Create a new resource
     post "/dataset/?" do
-      # TOD: task
       @uri = uri("/#{SERVICE}/#{SecureRandom.uuid}")
       parse_put
-      response['Content-Type'] = "text/uri-list"
-      @uri
     end
 
     get "/dataset/:id/?" do
@@ -261,7 +262,6 @@ module OpenTox
 
     # Create or updata a resource
     put "/dataset/:id/?" do
-      # TOD: task
       parse_put
     end
 
