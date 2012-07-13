@@ -1,15 +1,30 @@
+require 'roo'
+#require 'simple_xlsx'
+#require 'axlsx'
+
 module OpenTox
   class Application < Service
 
     @warnings = []
 
     helpers do
+
       def from_csv(csv)
         from_table CSV.parse(csv)
       end
 
+      def from_spreadsheet spreadsheet
+        extensions = { Excel => ".xls", Excelx => ".xlsx", Openoffice => ".ods" }
+        input = params[:file][:tempfile].path + ".xls"
+        csv_file = params[:file][:tempfile].path + ".csv"
+        File.rename params[:file][:tempfile].path, input # roo needs "correct" extensions
+        spreadsheet.new(input).to_csv csv_file # roo cannot write to strings
+        @body = from_csv File.read(csv_file)
+        @content_type = "text/plain"
+      end
+
 =begin
-      def parse_sdf(sdf)
+      def from_sdf(sdf)
 
         #obconversion = OpenBabel::OBConversion.new
         #obmol = OpenBabel::OBMol.new
@@ -131,61 +146,86 @@ module OpenTox
         ntriples.join("\n")
       end
 
-      def ordered?
-        sparql = "SELECT DISTINCT ?s FROM <#{@uri}> WHERE {?s <#{RDF.type}> <#{RDF::OT.OrderedDataset}>}"
-        FourStore.query(sparql, "text/uri-list").split("\n").empty? ? false : true
-      end
+=begin
+      def to_xlsx
 
-      def to_csv
-        accept = "text/uri-list"
-        csv_string = CSV.generate do |csv|
-          if ordered?
-            sparql = "SELECT DISTINCT ?s FROM <#{@uri}> WHERE {?s <#{RDF.type}> <#{RDF::OT.Feature}> . ?s <#{RDF::OLO.index}> ?i} ORDER BY ?i"
-            features = FourStore.query(sparql, accept).split("\n").collect{|uri| OpenTox::Feature.new uri}
-            csv << ["SMILES"] + features.collect{ |f| f.get; f[RDF::DC.title] }
-            sparql = "SELECT DISTINCT ?i FROM <#{@uri}> WHERE {?s <#{RDF.type}> <#{RDF::OT.DataEntry}> . ?s <#{RDF::OLO.index}> ?i} ORDER BY ?i"
-            FourStore.query(sparql, accept).split("\n").each do |data_entry_idx|
-              sparql = "SELECT DISTINCT ?compound FROM <#{@uri}> WHERE {
-                ?data_entry <#{RDF::OLO.index}> #{data_entry_idx} ;
-                  <#{RDF::OT.compound}> ?compound. }"
-              compound = OpenTox::Compound.new FourStore.query(sparql, accept).strip
-              sparql = "SELECT ?value FROM <#{@uri}> WHERE {
-                ?data_entry <#{RDF::OLO.index}> #{data_entry_idx} ;
-                  <#{RDF::OT.values}> ?v .
-                ?v <#{RDF::OT.feature}> ?f;
-                  <#{RDF::OT.value}> ?value .
-                ?f <#{RDF::OLO.index}> ?i.
+        # both simple_xlsx and axlsx create empty documents with OLE2 errors
+        xlsx = @uri.split("/").last+".xlsx"
+        p = Axlsx::Package.new
+        wb = p.workbook
+        wb.add_worksheet(:name => "test") do |sheet|
+          to_table.each { |row| sheet.add_row row; puts row }
+        end
+        p.serialize("test.xlsx")
 
-                  } ORDER BY ?i"
-              values = FourStore.query(sparql,accept).split("\n")
-              # Fill up trailing empty cells
-              csv << [compound.to_smiles] + values.fill("",values.size,features.size-values.size)
-            end
-          else
-            sparql = "SELECT DISTINCT ?s FROM <#{@uri}> WHERE {?s <#{RDF.type}> <#{RDF::OT.Feature}>}"
-            features = FourStore.query(sparql, accept).split("\n").collect{|uri| OpenTox::Feature.new uri}
-            csv << ["SMILES"] + features.collect{ |f| f.get; f[RDF::DC.title] }
-            sparql = "SELECT ?s FROM <#{@uri}> WHERE {?s <#{RDF.type}> <#{RDF::OT.Compound}>. }"
-            compounds = FourStore.query(sparql, accept).split("\n").collect{|uri| OpenTox::Compound.new uri}
-            compounds.each do |compound|
-              data_entries = []
-              features.each do |feature|
-                sparql = "SELECT ?value FROM <#{@uri}> WHERE {
-                  ?data_entry <#{RDF::OT.compound}> <#{compound.uri}>;
-                    <#{RDF::OT.values}> ?v .
-                  ?v <#{RDF::OT.feature}> <#{feature.uri}>;
-                    <#{RDF::OT.value}> ?value.
-                    } ORDER BY ?data_entry"
-                FourStore.query(sparql, accept).split("\n").each_with_index do |value,i|
-                  data_entries[i] = Array.new(features.size) unless data_entries[i]
-                  data_entries[i] << value
-                end
-              end
-              data_entries.each{|data_entry| csv << [compound.to_smiles] + data_entry}
+        p.to_stream
+#```
+        #Tempfile.open(@uri.split("/").last+".xlsx") do |xlsx|
+          SimpleXlsx::Serializer.new(xlsx) do |doc|
+            doc.add_sheet("People") do |sheet|
+              to_table.each { |row| sheet.add_row row }
             end
           end
+          send_file xlsx
+        #end
+      end
+=end
+
+      def to_csv
+        csv_string = CSV.generate do |csv|
+          to_table.each { |row| csv << row }
         end
-        csv_string
+      end
+
+      def to_table
+        accept = "text/uri-list"
+        table  = []
+        if ordered?
+          sparql = "SELECT DISTINCT ?s FROM <#{@uri}> WHERE {?s <#{RDF.type}> <#{RDF::OT.Feature}> . ?s <#{RDF::OLO.index}> ?i} ORDER BY ?i"
+          features = FourStore.query(sparql, accept).split("\n").collect{|uri| OpenTox::Feature.new uri}
+          table << ["SMILES"] + features.collect{ |f| f.get; f[RDF::DC.title] }
+          sparql = "SELECT DISTINCT ?i FROM <#{@uri}> WHERE {?s <#{RDF.type}> <#{RDF::OT.DataEntry}> . ?s <#{RDF::OLO.index}> ?i} ORDER BY ?i"
+          FourStore.query(sparql, accept).split("\n").each do |data_entry_idx|
+            sparql = "SELECT DISTINCT ?compound FROM <#{@uri}> WHERE {
+              ?data_entry <#{RDF::OLO.index}> #{data_entry_idx} ;
+                <#{RDF::OT.compound}> ?compound. }"
+            compound = OpenTox::Compound.new FourStore.query(sparql, accept).strip
+            sparql = "SELECT ?value FROM <#{@uri}> WHERE {
+              ?data_entry <#{RDF::OLO.index}> #{data_entry_idx} ;
+                <#{RDF::OT.values}> ?v .
+              ?v <#{RDF::OT.feature}> ?f;
+                <#{RDF::OT.value}> ?value .
+              ?f <#{RDF::OLO.index}> ?i.
+
+                } ORDER BY ?i"
+            values = FourStore.query(sparql,accept).split("\n")
+            # Fill up trailing empty cells
+            table << [compound.to_smiles] + values.fill("",values.size,features.size-values.size)
+          end
+        else
+          sparql = "SELECT DISTINCT ?s FROM <#{@uri}> WHERE {?s <#{RDF.type}> <#{RDF::OT.Feature}>}"
+          features = FourStore.query(sparql, accept).split("\n").collect{|uri| OpenTox::Feature.new uri}
+          table << ["SMILES"] + features.collect{ |f| f.get; f[RDF::DC.title] }
+          sparql = "SELECT ?s FROM <#{@uri}> WHERE {?s <#{RDF.type}> <#{RDF::OT.Compound}>. }"
+          compounds = FourStore.query(sparql, accept).split("\n").collect{|uri| OpenTox::Compound.new uri}
+          compounds.each do |compound|
+            data_entries = []
+            features.each do |feature|
+              sparql = "SELECT ?value FROM <#{@uri}> WHERE {
+                ?data_entry <#{RDF::OT.compound}> <#{compound.uri}>;
+                  <#{RDF::OT.values}> ?v .
+                ?v <#{RDF::OT.feature}> <#{feature.uri}>;
+                  <#{RDF::OT.value}> ?value.
+                  } ORDER BY ?data_entry"
+              FourStore.query(sparql, accept).split("\n").each_with_index do |value,i|
+                data_entries[i] = Array.new(features.size) unless data_entries[i]
+                data_entries[i] << value
+              end
+            end
+            data_entries.each{|data_entry| table << [compound.to_smiles] + data_entry}
+          end
+        end
+        table
       end
 
       def feature_type(value)
@@ -198,6 +238,11 @@ module OpenTox
         end
       end
 
+      def ordered?
+        sparql = "SELECT DISTINCT ?s FROM <#{@uri}> WHERE {?s <#{RDF.type}> <#{RDF::OT.OrderedDataset}>}"
+        FourStore.query(sparql, "text/uri-list").split("\n").empty? ? false : true
+      end
+
       def parse_put
         task = OpenTox::Task.create $task[:uri], nil, RDF::DC.description => "Dataset upload: #{@uri}" do
           case @content_type
@@ -206,20 +251,11 @@ module OpenTox
             @body = from_csv @body
             @content_type = "text/plain"
           when "application/vnd.ms-excel"
-            xls = params[:file][:tempfile].path + ".xls"
-            File.rename params[:file][:tempfile].path, xls # roo needs these endings
-            @body = from_csv Excel.new(xls).to_csv
-            @content_type = "text/plain"
+            from_spreadsheet Excel
           when "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            xlsx = params[:file][:tempfile].path + ".xlsx"
-            File.rename params[:file][:tempfile].path, xlsx # roo needs these endings
-            @body = from_csv Excelx.new(xlsx).to_csv
-            @content_type = "text/plain"
+            from_spreadsheet Excelx
           when "application/vnd.oasis.opendocument.spreadsheet"
-            ods = params[:file][:tempfile].path + ".ods"
-            File.rename params[:file][:tempfile].path, ods # roo needs these endings
-            @body = from_csv Excelx.new(ods).to_csv
-            @content_type = "text/plain"
+            from_spreadsheet Openoffice
     #      when "chemical/x-mdl-sdfile"
     #        @body = parse_sdf @body
     #        @content_type = "text/plain"
@@ -257,8 +293,11 @@ module OpenTox
         when "text/csv"
           to_csv
         #when "application/vnd.ms-excel"
+          #to_spreadsheet Excel
         #when "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+          #to_xlsx
         #when "application/vnd.oasis.opendocument.spreadsheet"
+          #to_spreadsheet Openoffice
         #when "chemical/x-mdl-sdfile"
         else
           bad_request_error "'#{@accept}' is not a supported content type."
