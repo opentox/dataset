@@ -61,7 +61,7 @@ module OpenTox
           feature = OpenTox::Feature.new File.join($feature[:uri], SecureRandom.uuid)
           feature[RDF::DC.title] = f
           features << feature
-          values = table.collect{|row| row[i+1].strip unless row[i+1].nil?}.uniq # skip compound column
+          values = table.collect{|row| row[i+1].strip unless row[i+1].nil?}.uniq.compact # skip compound column
           if values.size <= 3 # max classes
             feature.append RDF.type, RDF::OT.NominalFeature
             feature.append RDF.type, RDF::OT.StringFeature
@@ -82,7 +82,7 @@ module OpenTox
         # compounds and values
         compound_uris = []
         table.each_with_index do |values,j|
-          values.collect!{|v| v.strip unless v.nil?}
+          values.collect!{|v| v.nil? ? nil : v.strip }
           compound = values.shift
           begin
             case compound_format
@@ -157,7 +157,9 @@ module OpenTox
                 ?f <#{RDF::OLO.index}> ?i.
 
                   } ORDER BY ?i"
-              csv << [compound.to_smiles] + FourStore.query(sparql,accept).split("\n")
+              values = FourStore.query(sparql,accept).split("\n")
+              # Fill up trailing empty cells
+              csv << [compound.to_smiles] + values.fill("",values.size,features.size-values.size)
             end
           else
             sparql = "SELECT DISTINCT ?s FROM <#{@uri}> WHERE {?s <#{RDF.type}> <#{RDF::OT.Feature}>}"
@@ -175,7 +177,7 @@ module OpenTox
                     <#{RDF::OT.value}> ?value.
                     } ORDER BY ?data_entry"
                 FourStore.query(sparql, accept).split("\n").each_with_index do |value,i|
-                  data_entries[i] = [] unless data_entries[i]
+                  data_entries[i] = Array.new(features.size) unless data_entries[i]
                   data_entries[i] << value
                 end
               end
