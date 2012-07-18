@@ -1,6 +1,5 @@
 require 'roo'
-#require 'simple_xlsx'
-#require 'axlsx'
+#require 'profiler'
 
 module OpenTox
   class Application < Service
@@ -61,6 +60,77 @@ module OpenTox
 
       def from_table table
 
+=begin
+        dataset = OpenTox::Dataset.new @uri
+        puts dataset.uri
+        feature_names = table.shift.collect{|f| f.strip}
+        puts feature_names.inspect
+        dataset.append RDF::OT.Warnings, "Duplicated features in table header." unless feature_names.size == feature_names.uniq.size
+        compound_format = feature_names.shift.strip
+        bad_request_error "#{compound_format} is not a supported compound format. Accepted formats: URI, SMILES, InChI." unless compound_format =~ /URI|URL|SMILES|InChI/i
+        features = []
+        feature_names.each_with_index do |f,i|
+          feature = OpenTox::Feature.new File.join($feature[:uri], SecureRandom.uuid)
+          feature[RDF::DC.title] = f
+          features << feature
+          values = table.collect{|row| row[i+1].strip unless row[i+1].nil?}.uniq.compact # skip compound column
+          if values.size <= 3 # max classes
+            feature.append RDF.type, RDF::OT.NominalFeature
+            feature.append RDF.type, RDF::OT.StringFeature
+            feature[RDF::OT.acceptValue] = values
+          else
+            types = values.collect{|v| feature_type(v)}
+            if types.include?(RDF::OT.NominalFeature)
+              dataset.append RDF::OT.Warnings, "Feature #{f} contains nominal and numeric values."
+            else
+              feature.append RDF.type, RDF::OT.NumericFeature
+            end
+          end
+          feature.put
+        end
+        dataset.features = features
+        compounds = []
+        table.each_with_index do |values,j|
+          c = values.shift
+          puts c
+          puts compound_format
+          values.collect!{|v| v.nil? ? nil : v.strip }
+          #begin
+            case compound_format
+            when /URI|URL/i
+              compound = OpenTox::Compound.new c
+            when /SMILES/i
+              compound = OpenTox::Compound.from_smiles($compound[:uri], c)
+            when /InChI/i
+              compound = OpenTox::Compound.from_inchi($compound[:uri], URI.decode_www_form_component(c))
+            end
+          #rescue
+            #dataset.append RDF::OT.Warnings, "Cannot parse compound \"#{c}\" at position #{j+2}, all entries are ignored."
+            #next
+          #end
+          unless compound_uri.match(/InChI=/)
+            dataset.append RDF::OT.Warnings, "Cannot parse compound \"#{c}\" at position #{j+2}, all entries are ignored."
+            next
+          end
+          compounds << compound
+          unless values.size == features.size
+            dataset.append RDF::OT.Warnings, "Number of values at position #{j+2} (#{values.size}) is different than header size (#{features.size}), all entries are ignored."
+            next
+          end
+
+          dataset << values
+
+        end
+        dataset.compounds = compounds
+        compounds.duplicates.each do |compound|
+          positions = []
+          compounds.each_with_index{|c,i| positions << i+1 if c.uri == compound.uri}
+          dataset.append RDF::OT.Warnings, "Duplicated compound #{compound.uri} at rows #{positions.join(', ')}. Entries are accepted, assuming that measurements come from independent experiments." 
+        end
+        puts dataset.to_ntriples
+        dataset.to_ntriples
+=end
+
         @warnings = []
         ntriples = ["<#{@uri}> <#{RDF.type}> <#{RDF::OT.Dataset}>."]
         ntriples << ["<#{@uri}> <#{RDF.type}> <#{RDF::OT.OrderedDataset}>."]
@@ -84,7 +154,7 @@ module OpenTox
           else
             types = values.collect{|v| feature_type(v)}
             if types.include?(RDF::OT.NominalFeature)
-              @warnings << "Feature '#{f}' contains nominal and numeric values."
+              @warnings << "Feature #{f} contains nominal and numeric values."
             else
               feature.append RDF.type, RDF::OT.NumericFeature
             end
@@ -109,7 +179,11 @@ module OpenTox
               compound_uri = OpenTox::Compound.from_inchi($compound[:uri], URI.decode_www_form_component(compound)).uri
             end
           rescue
-            @warnings << "Cannot parse compound #{compound} at position #{j+2}, all entries are ignored."
+            @warnings << "Cannot parse compound \"#{compound}\" at position #{j+2}, all entries are ignored."
+            next
+          end
+          unless compound_uri.match(/InChI=/)
+            @warnings << "Cannot parse compound \"#{compound}\" at position #{j+2}, all entries are ignored."
             next
           end
           compound_uris << compound_uri
@@ -121,7 +195,8 @@ module OpenTox
           ntriples << "<#{compound_uri}> <#{RDF::OLO.index}> #{j} ."
 
           values.each_with_index do |v,i|
-            @warnings << "Empty value for compound '#{compound}' (row #{j+2}) and feature '#{feature_names[i]}' (column #{i+2})." if v.blank?
+            #@warnings << "Empty value for compound #{compound} (row #{j+2}) and feature \"#{feature_names[i]}\" (column #{i+2})." if v.blank?
+            #@warnings << "Empty value in row #{j+2}, column #{i+2} (feature \"#{feature_names[i]}\")." if v.blank?
 
             data_entry_node = "_:dataentry"+ j.to_s
             value_node = data_entry_node+ "_value"+ i.to_s
@@ -144,6 +219,8 @@ module OpenTox
 
         ntriples << "<#{@uri}> <#{RDF::OT.Warnings}> \"#{@warnings.join('\n')}\" ."
         ntriples.join("\n")
+=begin
+=end
       end
 
 =begin
@@ -178,6 +255,16 @@ module OpenTox
       end
 
       def to_table
+=begin
+        table = []
+        dataset = OpenTox::Dataset.new @uri
+        dataset.get
+        table << ["SMILES"] + dataset.features.collect{|f| f.get; f.title}
+        dataset.data_entries.each_with_index do |data_entry,i|
+          table << [dataset.compounds[i]] + data_entry
+        end
+        table
+=end
         accept = "text/uri-list"
         table  = []
         if ordered?
@@ -226,6 +313,8 @@ module OpenTox
           end
         end
         table
+=begin
+=end
       end
 
       def feature_type(value)
@@ -245,6 +334,7 @@ module OpenTox
 
       def parse_put
         task = OpenTox::Task.create $task[:uri], nil, RDF::DC.description => "Dataset upload: #{@uri}" do
+          #Profiler__::start_profile
           case @content_type
           when "text/plain", "text/turtle", "application/rdf+xml" # no conversion needed
           when "text/csv"
@@ -265,8 +355,10 @@ module OpenTox
           FourStore.put @uri, @body, @content_type
           if params[:file]
             nt = "<#{@uri}> <#{RDF::DC.title}> \"#{params[:file][:filename]}\".\n<#{uri}> <#{RDF::OT.hasSource}> \"#{params[:file][:filename]}\"."
-            FourStore.post(uri, nt, "text/plain")
+            FourStore.post(@uri, nt, "text/plain")
           end
+          #Profiler__::stop_profile
+          #Profiler__::print_profile($stdout)
           @uri
         end
         response['Content-Type'] = "text/uri-list"
@@ -285,13 +377,15 @@ module OpenTox
     end
 
     get "/dataset/:id/?" do
+      #Profiler__::start_profile
+      @accept = "text/html" if @accept == '*/*'
       case @accept
       when "application/rdf+xml", "text/turtle", "text/plain", /html/
-        FourStore.get(@uri, @accept)
+        r = FourStore.get(@uri, @accept)
       else
         case @accept
         when "text/csv"
-          to_csv
+          r = to_csv
         #when "application/vnd.ms-excel"
           #to_spreadsheet Excel
         #when "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
@@ -303,6 +397,9 @@ module OpenTox
           bad_request_error "'#{@accept}' is not a supported content type."
         end
       end
+      #Profiler__::stop_profile
+      #Profiler__::print_profile($stdout)
+      r
     end
 
     # Create or updata a resource

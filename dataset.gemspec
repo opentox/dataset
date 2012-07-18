@@ -11,7 +11,7 @@ Gem::Specification.new do |s|
   s.description = %q{OpenTox Dataset Service}
   s.license     = 'GPL-3'
 
-  s.rubyforge_project = "feature"
+  s.rubyforge_project = "dataset"
 
   s.files         = `git ls-files`.split("\n")
   s.required_ruby_version = '>= 1.9.2'
@@ -19,7 +19,7 @@ Gem::Specification.new do |s|
   # specify any dependencies here; for example:
   s.add_runtime_dependency "opentox-server"
   s.add_runtime_dependency 'roo'
-  s.add_runtime_dependency 'axlsx'
+  #s.add_runtime_dependency 'axlsx'
   #s.add_runtime_dependency 'simple_xlsx_writer'
   s.post_install_message = "Please configure your service in ~/.opentox/config/dataset.rb"
 end
