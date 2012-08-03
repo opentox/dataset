@@ -2,7 +2,7 @@
 $:.push File.expand_path("../lib", __FILE__)
 
 Gem::Specification.new do |s|
-  s.name        = "feature"
+  s.name        = "dataset"
   s.version     = File.read("./VERSION")
   s.authors     = ["Christoph Helma"]
   s.email       = ["helma@in-silico.ch"]
