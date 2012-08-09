@@ -53,7 +53,8 @@ echo
 install_with_bundler
 
 # config
-echo '$aa = { :uri => nil }' > $OT_CONFIG_DIR/config/$SELF.rb
+[ -f $OT_CONFIG_DIR/config/$SELF.rb ] || touch $OT_CONFIG_DIR/config/$SELF.rb
+if ! cat "$OT_DEFAULT_CONFIG" | grep "$SELF">/dev/null 2>&1; then echo '$dataset = { :uri => "http://localhost:8083/dataset" }' >> $OT_DEFAULT_CONFIG; fi
 
 echo
 echo "Installation finished."
