@@ -2,11 +2,11 @@
 $:.push File.expand_path("../lib", __FILE__)
 
 Gem::Specification.new do |s|
-  s.name        = "feature"
+  s.name        = "opentox-dataset"
   s.version     = File.read("./VERSION")
   s.authors     = ["Christoph Helma"]
   s.email       = ["helma@in-silico.ch"]
-  s.homepage    = ""
+  s.homepage    = "http://github.com/opentox/dataset"
   s.summary     = %q{OpenTox Dataset Service}
   s.description = %q{OpenTox Dataset Service}
   s.license     = 'GPL-3'
