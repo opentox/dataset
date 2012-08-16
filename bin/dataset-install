@@ -30,11 +30,8 @@ RUBY_DIR="$HOME/.rbenv/versions/$RUBY_NUM_VER"
 
 # # # Install
 
-LOG="$OT_PREFIX/tmp/`basename $0`.log"
 check_utils "rbenv find"
-echo
-echo "Installation ('$LOG'):"
-echo
+check_log $SELF
 
 if [ "$OT_BRANCH" = "development" ]; then
   cmd="test -d $OT_PREFIX/opentox-server" && run_cmd "$cmd" "Opentox-server"
@@ -52,21 +49,14 @@ fi
 echo
 install_with_bundler
 
+cmd="$OT_PREFIX/4S/bin/4s-backend-setup $SELF" && run_cmd "$cmd" "Create '$SELF' 4store backend"
+
 # config
 [ -f $OT_CONFIG_DIR/config/$SELF.rb ] || touch $OT_CONFIG_DIR/config/$SELF.rb
+if ! cat "$OT_CONFIG_DIR/config/$SELF.rb" | grep "four_store">/dev/null 2>&1; then echo '$four_store = { :uri => "http://localhost:9083", :user => "", :password => "" }' >> $OT_CONFIG_DIR/config/$SELF.rb; fi
 if ! cat "$OT_DEFAULT_CONF" | grep "$SELF">/dev/null 2>&1; then echo '$dataset = { :uri => "http://localhost:8083/dataset" }' >> $OT_DEFAULT_CONF; fi
 
-echo
-echo "Installation finished."
-echo
-echo "IMPORTANT: How to configure your system:"
-echo "IMPORTANT: a) Include '$OT_UI_CONF' in shell startup (e.g. ~/.bashrc)."
-echo "IMPORTANT: b) Manually source '$OT_UI_CONF' every time."
-echo "IMPORTANT: The command in both cases: '. $OT_UI_CONF'"
-echo "IMPORTANT: NOW would be the best time to configure!"
-echo
-echo "Thank you for your attention."
-echo
+notify
 
 # return to wd
 cd "$DIR"
