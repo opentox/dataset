@@ -362,7 +362,7 @@ module OpenTox
           @uri
         end
         response['Content-Type'] = "text/uri-list"
-        task.uri
+        halt 202, task.uri
       end
     end
 
