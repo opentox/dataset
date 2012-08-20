@@ -287,7 +287,7 @@ module OpenTox
                 } ORDER BY ?i"
             values = FourStore.query(sparql,accept).split("\n")
             # Fill up trailing empty cells
-            table << [compound.to_smiles] + values.fill("",values.size,features.size-values.size)
+            table << [compound.smiles] + values.fill("",values.size,features.size-values.size)
           end
         else
           sparql = "SELECT DISTINCT ?s FROM <#{@uri}> WHERE {?s <#{RDF.type}> <#{RDF::OT.Feature}>}"
@@ -309,7 +309,7 @@ module OpenTox
                 data_entries[i] << value
               end
             end
-            data_entries.each{|data_entry| table << [compound.to_smiles] + data_entry}
+            data_entries.each{|data_entry| table << [compound.smiles] + data_entry}
           end
         end
         table
