@@ -43,7 +43,7 @@ fi
 [ -d $OT_CONFIG_DIR/config/$SELF ] || cmd="mkdir -p $OT_CONFIG_DIR/config/$SELF" && run_cmd "$cmd" "Config directory"
 
 # ruby
-[ "`$RBENV local 2>/dev/null`" = "$RUBY_NUM_VER" ] || install_ruby
+install_ruby
 
 # self
 echo
