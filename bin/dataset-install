@@ -49,8 +49,6 @@ install_ruby
 echo
 install_with_bundler
 
-cmd="$OT_PREFIX/4S/bin/4s-backend-setup $SELF" && run_cmd "$cmd" "Create '$SELF' 4store backend"
-
 # config
 [ -f $OT_CONFIG_DIR/config/$SELF.rb ] || touch $OT_CONFIG_DIR/config/$SELF.rb
 if ! cat "$OT_CONFIG_DIR/config/$SELF.rb" | grep "four_store">/dev/null 2>&1; then echo '$four_store = { :uri => "http://localhost:9088", :user => "", :password => "" }' >> $OT_CONFIG_DIR/config/$SELF.rb; fi
