@@ -53,7 +53,8 @@ cmd="$OT_PREFIX/4S/bin/4s-backend-setup $SELF" && run_cmd "$cmd" "Create '$SELF'
 
 # config
 [ -f $OT_CONFIG_DIR/config/$SELF.rb ] || touch $OT_CONFIG_DIR/config/$SELF.rb
-if ! cat "$OT_CONFIG_DIR/config/$SELF.rb" | grep "four_store">/dev/null 2>&1; then echo '$four_store = { :uri => "http://localhost:9083", :user => "", :password => "" }' >> $OT_CONFIG_DIR/config/$SELF.rb; fi
+if ! cat "$OT_CONFIG_DIR/config/$SELF.rb" | grep "four_store">/dev/null 2>&1; then echo '$four_store = { :uri => "http://localhost:9088", :user => "", :password => "" }' >> $OT_CONFIG_DIR/config/$SELF.rb; fi
+if ! cat "$OT_CONFIG_DIR/config/$SELF.rb" | grep "aa">/dev/null 2>&1; then echo '$aa = { :uri => nil }' >> $OT_CONFIG_DIR/config/$SELF.rb; fi
 if ! cat "$OT_DEFAULT_CONF" | grep "$SELF">/dev/null 2>&1; then echo '$dataset = { :uri => "http://localhost:8083/dataset" }' >> $OT_DEFAULT_CONF; fi
 
 notify
