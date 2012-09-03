@@ -6,9 +6,6 @@
 SELF=$(basename $0 -install)
 [ "`id -u`" = "0" ] && echo "This script must be run as non-root." 1>&2 && exit 1
 
-# Adjust ruby version here!
-RUBY_NUM_VER="1.9.3-p194"
-
 echo
 echo "Welcome to service installation (<Return> to continue)."
 read delete_me
@@ -41,6 +38,9 @@ fi
 
 # log directory for this service
 [ -d $OT_CONFIG_DIR/config/$SELF ] || cmd="mkdir -p $OT_CONFIG_DIR/config/$SELF" && run_cmd "$cmd" "Config directory"
+
+# Adjust ruby version here!
+RUBY_NUM_VER="1.9.3-p194"
 
 # ruby
 install_ruby
