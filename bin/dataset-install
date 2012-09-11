@@ -6,10 +6,20 @@
 SELF=$(basename $0 -install)
 [ "`id -u`" = "0" ] && echo "This script must be run as non-root." 1>&2 && exit 1
 
-echo
-echo "Welcome to service installation (<Return> to continue)."
-read delete_me
+SILENT=false
+if [ -n "$1" ]
+then
+    if [ "$1" = "silent" ]
+    then
+        SILENT=true
+    fi
+fi
 
+if [ $SILENT = false ]; then
+  echo
+  echo "Welcome to service installation (<Return> to continue)."
+  read delete_me
+fi
 
 # check wd is root of service
 DIR=`pwd`
@@ -55,7 +65,9 @@ if ! cat "$OT_CONFIG_DIR/config/$SELF.rb" | grep "four_store">/dev/null 2>&1; th
 if ! cat "$OT_CONFIG_DIR/config/$SELF.rb" | grep "aa">/dev/null 2>&1; then echo '$aa = { :uri => nil }' >> $OT_CONFIG_DIR/config/$SELF.rb; fi
 if ! cat "$OT_DEFAULT_CONF" | grep "$SELF">/dev/null 2>&1; then echo '$dataset = { :uri => "http://localhost:8083/dataset" }' >> $OT_DEFAULT_CONF; fi
 
-notify
+if [ $SILENT = false ]; then
+  notify
+fi
 
 # return to wd
 cd "$DIR"
