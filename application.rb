@@ -1,6 +1,20 @@
+# dataset.rb
+# Loads libraries and webapps
+# Author: Christoph Helma, Andreas Maunz
+
 require 'roo'
+
+# Library code
+$logger.debug "Dataset booting: #{$compound.collect{|k,v| "#{k}: '#{v}'"} }"
+Dir['./lib/utils/shims/*.rb'].each { |f| require f } # Shims for legacy code
+Dir['./lib/utils/*.rb'].each { |f| require f } # Utils for Libs
+Dir['./lib/compound/*.rb'].each { |f| require f } # Libs
+Dir['./lib/*.rb'].each { |f| require f } # Libs
+Dir['./webapp/*.rb'].each { |f| require f } # Webapps
+
 #require 'profiler'
 
+# Entry point
 module OpenTox
   class Application < Service
 
