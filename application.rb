@@ -23,7 +23,9 @@ module OpenTox
     helpers do
 
       def from_csv(csv)
-        from_table CSV.parse(csv)
+        table = CSV.parse(csv)
+        table.collect! { |row| row.collect! { |val| val.nil? ? "" : val } }
+        from_table table
       end
 
       def from_spreadsheet spreadsheet
