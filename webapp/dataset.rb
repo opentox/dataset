@@ -99,7 +99,17 @@ module OpenTox
            single_cmpd_ds = OpenTox::Dataset.new(nil,@subjectid)
            single_cmpd_ds.parse_rdfxml(ds_string)
            single_cmpd_ds.get(true)
-           result_ds.features = single_cmpd_ds.features unless result_ds.features.size>0 # features assumed to be present already
+           unless result_ds.features.size>0 # features present already?
+             result_ds.features = single_cmpd_ds.features # AM: features
+             result_ds.parameters = ["pc_type", "lib", "descriptor"].collect{ |key| # AM: parameters
+               val = single_cmpd_ds.find_parameter_value(key)
+               { DC.title => key, OT.paramValue => (val.nil? ? "" : val) }
+             }
+             result_ds[RDF.type] = single_cmpd_ds[RDF.type] # AM: metadata
+             result_ds[DC.title] = single_cmpd_ds[DC.title]
+             result_ds[DC.creator] = url_for("/dataset/#{dataset}/pc",:full)
+             result_ds[OT.hasSource] = url_for("/dataset/#{dataset}/pc",:full)
+           end
            result_ds << [ cmpd ] + single_cmpd_ds.data_entries[0]
          }
          result_ds.put @subjectid

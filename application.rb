@@ -163,17 +163,20 @@ module OpenTox
           feature[RDF::DC.title] = f
           features << feature
           values = table.collect{|row| row[i+1].strip unless row[i+1].nil?}.uniq.compact # skip compound column
+          low_diff_values=false
           if values.size <= 3 # max classes
             feature.append RDF.type, RDF::OT.NominalFeature
             feature.append RDF.type, RDF::OT.StringFeature
             feature[RDF::OT.acceptValue] = values
+            low_diff_values=true
+          end
+          types = values.collect{|v| feature_type(v)}.uniq
+          if types.include? RDF::OT.NominalFeature and !low_diff_values
+            feature.append RDF.type, RDF::OT.NominalFeature
           else
-            types = values.collect{|v| feature_type(v)}
-            if types.include?(RDF::OT.NominalFeature)
-              @warnings << "Feature #{f} contains nominal and numeric values."
-            else
-              feature.append RDF.type, RDF::OT.NumericFeature
-            end
+            types.each { |t| 
+              feature.append RDF.type, t unless t.nil? 
+            }
           end
           feature.put
           ntriples << "<#{feature.uri}> <#{RDF.type}> <#{RDF::OT.Feature}>."
