@@ -95,7 +95,7 @@ module OpenTox
          ds=OpenTox::Dataset.find("#{$dataset[:uri]}/#{dataset}",@subjectid)
          $logger.debug "AM: #{ds.compounds.size} compounds"
          ds.compounds.each { |cmpd|
-           ds_string = OpenTox::RestClientWrapper.post("#{$compound[:uri]}/#{cmpd.inchi}/pc", params, {:accept => "application/rdf+xml"})
+           ds_string = RestClient.post("#{$compound[:uri]}/#{cmpd.inchi}/pc", params, {:accept => "application/rdf+xml"})
            single_cmpd_ds = OpenTox::Dataset.new(nil,@subjectid)
            single_cmpd_ds.parse_rdfxml(ds_string)
            single_cmpd_ds.get(true)
