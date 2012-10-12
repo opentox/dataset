@@ -119,7 +119,7 @@ helpers do
     LOGGER.debug "zipping #{@@datadir}/#{@id}.json.zip"
     File.open("#{@@datadir}/#{@id}.json","w+"){|f| f.puts dataset.to_json}
     output = IO.popen("/usr/bin/zip -D #{@@datadir}/#{@id}.json.zip #{@@datadir}/#{@id}.json")
-    $stderr.puts output.readlines
+    LOGGER.debug output.readlines.collect{|l| l.chomp}.join(";")
     output.close
     #File.delete("#{@@datadir}/#{@id}.json")
   end
@@ -128,7 +128,7 @@ helpers do
     if !File.exist?("#{@@datadir}/#{@id}.json")
       LOGGER.debug "unzipping #{@@datadir}/#{@id}.json.zip"
       output = IO.popen("/usr/bin/unzip -nj #{@json_zip_file} -d #{@@datadir}")
-      $stderr.puts output.readlines
+      LOGGER.debug output.readlines.collect{|l| l.chomp}.join(";")
       output.close
       raise "could not unzip file" unless File.exist?("#{@@datadir}/#{@id}.json")
     end
@@ -141,7 +141,7 @@ helpers do
     if !File.exist?("#{@@datadir}/#{@id}.json")
       LOGGER.debug "unzipping #{@@datadir}/#{@id}.json.zip"
       output = IO.popen("/usr/bin/unzip -nj #{@json_zip_file} -d #{@@datadir}")
-      $stderr.puts output.readlines
+      LOGGER.debug output.readlines.collect{|l| l.chomp}.join(";")
       output.close
       raise "could not unzip file #{@json_zip_file} to #{@@datadir}/#{@id}.json" unless File.exist?("#{@@datadir}/#{@id}.json")
     end
@@ -155,7 +155,7 @@ helpers do
     file = "#{@@datadir}/#{@id}.arff"
     File.open(file,"w+") { |f| f.puts arff }
     output = IO.popen("/usr/bin/zip -D #{@@datadir}/#{@id}.arff.zip #{@@datadir}/#{@id}.arff")
-    $stderr.puts output.readlines
+    LOGGER.debug output.readlines.collect{|l| l.chomp}.join(";")
     output.close
     #File.delete("#{@@datadir}/#{@id}.arff")
   end
@@ -164,7 +164,7 @@ helpers do
     if !File.exist?("#{@@datadir}/#{@id}.arff")
       LOGGER.debug "unzipping #{@@datadir}/#{@id}.arff.zip"
       output = IO.popen("/usr/bin/unzip -nj #{@@datadir}/#{@id}.arff.zip -d #{@@datadir}")
-      $stderr.puts output.readlines
+      LOGGER.debug output.readlines.collect{|l| l.chomp}.join(";")
       output.close
       raise "could not unzip file" unless File.exist?("#{@@datadir}/#{@id}.arff")
     end
