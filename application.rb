@@ -3,6 +3,7 @@ gem "opentox-ruby", "~> 3"
 require 'opentox-ruby'
 require 'profiler'
 require 'rjb'
+require 'open3'
 
 set :lock, true
 
@@ -118,9 +119,12 @@ helpers do
     raise unless @id
     LOGGER.debug "zipping #{@@datadir}/#{@id}.json.zip"
     File.open("#{@@datadir}/#{@id}.json","w+"){|f| f.puts dataset.to_json}
-    output = IO.popen("/usr/bin/zip -D #{@@datadir}/#{@id}.json.zip #{@@datadir}/#{@id}.json")
-    LOGGER.debug output.readlines.collect{|l| l.chomp}.join(";")
-    output.close
+    stdin, stdout, stderr = Open3.popen3("/usr/bin/zip -D #{@@datadir}/#{@id}.json.zip #{@@datadir}/#{@id}.json")
+    LOGGER.debug stdout.readlines.collect{|l| l.chomp}.join(";")
+    LOGGER.debug stderr.readlines.collect{|l| l.chomp}.join(";")
+    stdout.close
+    stderr.close
+    stdin.close
     #File.delete("#{@@datadir}/#{@id}.json")
   end
 
