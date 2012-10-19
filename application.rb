@@ -3,7 +3,6 @@ gem "opentox-ruby", "~> 3"
 require 'opentox-ruby'
 require 'profiler'
 require 'rjb'
-require 'open3'
 
 set :lock, true
 
@@ -115,65 +114,56 @@ helpers do
     zip_dataset( dataset )
   end
   
+  def json_file()
+    "#{@@datadir}/#{@id}.json"
+  end
+  
+  def json_zip_file()
+    "#{@@datadir}/#{@id}.json.zip"
+  end
+  
   def zip_dataset( dataset )
     raise unless @id
-    LOGGER.debug "zipping #{@@datadir}/#{@id}.json.zip"
-    File.open("#{@@datadir}/#{@id}.json","w+"){|f| f.puts dataset.to_json}
-    stdin, stdout, stderr = Open3.popen3("/usr/bin/zip -D #{@@datadir}/#{@id}.json.zip #{@@datadir}/#{@id}.json")
-    LOGGER.debug stdout.readlines.collect{|l| l.chomp}.join(";")
-    LOGGER.debug stderr.readlines.collect{|l| l.chomp}.join(";")
-    stdout.close
-    stderr.close
-    stdin.close
-    #File.delete("#{@@datadir}/#{@id}.json")
+    File.open(json_file(),"w+"){|f| f.puts dataset.to_json}
+    ZipUtil.zip(json_zip_file(),json_file())
+    #File.delete(json_file())
   end
 
   def unzip_dataset()
-    if !File.exist?("#{@@datadir}/#{@id}.json")
-      LOGGER.debug "unzipping #{@@datadir}/#{@id}.json.zip"
-      output = IO.popen("/usr/bin/unzip -nj #{@json_zip_file} -d #{@@datadir}")
-      LOGGER.debug output.readlines.collect{|l| l.chomp}.join(";")
-      output.close
-      raise "could not unzip file" unless File.exist?("#{@@datadir}/#{@id}.json")
-    end
-    dataset = OpenTox::Dataset.from_json File.read("#{@@datadir}/#{@id}.json")
-    #File.delete("#{@@datadir}/#{@id}.json")
-    dataset
+    OpenTox::Dataset.from_json(unzip_json())
   end
   
   def unzip_json()
-    if !File.exist?("#{@@datadir}/#{@id}.json")
-      LOGGER.debug "unzipping #{@@datadir}/#{@id}.json.zip"
-      output = IO.popen("/usr/bin/unzip -nj #{@json_zip_file} -d #{@@datadir}")
-      LOGGER.debug output.readlines.collect{|l| l.chomp}.join(";")
-      output.close
-      raise "could not unzip file #{@json_zip_file} to #{@@datadir}/#{@id}.json" unless File.exist?("#{@@datadir}/#{@id}.json")
+    if !File.exist?(json_file())
+      ZipUtil.unzip(json_zip_file(),@@datadir)
+      raise "could not unzip file" unless File.exist?(json_file())
     end
-    content = File.read("#{@@datadir}/#{@id}.json")
-    #File.delete("#{@@datadir}/#{@id}.json")
+    content =  File.read(json_file())
+    #File.delete(json_file())
     content
   end
 
+  def arff_file()
+    "#{@@datadir}/#{@id}.arff"
+  end
+  
+  def arff_zip_file()
+    "#{@@datadir}/#{@id}.arff.zip"
+  end
+  
   def zip_arff( arff )
-    LOGGER.debug "zipping #{@@datadir}/#{@id}.arff.zip"
-    file = "#{@@datadir}/#{@id}.arff"
-    File.open(file,"w+") { |f| f.puts arff }
-    output = IO.popen("/usr/bin/zip -D #{@@datadir}/#{@id}.arff.zip #{@@datadir}/#{@id}.arff")
-    LOGGER.debug output.readlines.collect{|l| l.chomp}.join(";")
-    output.close
-    #File.delete("#{@@datadir}/#{@id}.arff")
+    File.open(arff_file,"w+") { |f| f.puts arff }
+    ZipUtil.zip(arff_zip_file(),arff_file())
+    #File.delete(arff_file())
   end
   
   def unzip_arff()
-    if !File.exist?("#{@@datadir}/#{@id}.arff")
-      LOGGER.debug "unzipping #{@@datadir}/#{@id}.arff.zip"
-      output = IO.popen("/usr/bin/unzip -nj #{@@datadir}/#{@id}.arff.zip -d #{@@datadir}")
-      LOGGER.debug output.readlines.collect{|l| l.chomp}.join(";")
-      output.close
-      raise "could not unzip file" unless File.exist?("#{@@datadir}/#{@id}.arff")
+    if !File.exist?(arff_file())
+      ZipUtil.unzip(arff_zip_file(),@@datadir)
+      raise "could not unzip file" unless File.exist?(arff_file())
     end
-    content = File.read("#{@@datadir}/#{@id}.arff")
-    #File.delete("#{@@datadir}/#{@id}.arff")
+    content = File.read(arff_file())
+    #File.delete(arff_file())
     content
   end
     
@@ -423,6 +413,7 @@ end
     array << "#{dataset.compounds.size} compounds"
     array << "#{dataset.features.size} features"
     array << ["metadata", dataset.metadata]
+    array << ["features-uris", dataset.features.keys.sort]  
     array << ["compounds", dataset.compounds]
     array << ["features", dataset.features]
     
