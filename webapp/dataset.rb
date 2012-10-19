@@ -93,7 +93,6 @@ module OpenTox
        begin
          result_ds = OpenTox::Dataset.new(nil,@subjectid)
          ds=OpenTox::Dataset.find("#{$dataset[:uri]}/#{dataset}",@subjectid)
-         $logger.debug "AM: #{ds.compounds.size} compounds"
          ds.compounds.each { |cmpd|
            ds_string = RestClient.post("#{$compound[:uri]}/#{cmpd.inchi}/pc", params, {:accept => "application/rdf+xml"})
            single_cmpd_ds = OpenTox::Dataset.new(nil,@subjectid)
