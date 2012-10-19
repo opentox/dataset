@@ -3,7 +3,6 @@
 # Author: Christoph Helma, Andreas Maunz
 
 require 'roo'
-require 'base64'
 
 # Library code
 $logger.debug "Dataset booting: #{$dataset.collect{|k,v| "#{k}: '#{v}'"} }"
@@ -302,7 +301,6 @@ module OpenTox
               idx+1 
             end
           }.compact
-          $logger.debug quoted_features
           table << ["InChI"] + features.collect{ |f| f.get; f[RDF::DC.title] }
           sparql = "SELECT DISTINCT ?i FROM <#{@uri}> WHERE {?s <#{RDF.type}> <#{RDF::OT.DataEntry}> . ?s <#{RDF::OLO.index}> ?i} ORDER BY ?i"
           FourStore.query(sparql, accept).split("\n").each do |data_entry_idx|
@@ -327,6 +325,14 @@ module OpenTox
         else
           sparql = "SELECT DISTINCT ?s FROM <#{@uri}> WHERE {?s <#{RDF.type}> <#{RDF::OT.Feature}>}"
           features = FourStore.query(sparql, accept).split("\n").collect{|uri| OpenTox::Feature.new uri}
+          quoted_features = features.each_with_index.collect { |f,idx|
+            f.get
+            if (f[RDF.type].include?(RDF::OT.NominalFeature) or 
+                f[RDF.type].include?(RDF::OT.StringFeature) and
+               !f[RDF.type].include?(RDF::OT.NumericFeature))
+              idx+1 
+            end
+          }.compact
           table << ["InChI"] + features.collect{ |f| f.get; f[RDF::DC.title] }
           sparql = "SELECT ?s FROM <#{@uri}> WHERE {?s <#{RDF.type}> <#{RDF::OT.Compound}>. }"
           compounds = FourStore.query(sparql, accept).split("\n").collect{|uri| OpenTox::Compound.new uri}
@@ -339,12 +345,13 @@ module OpenTox
                 ?v <#{RDF::OT.feature}> <#{feature.uri}>;
                   <#{RDF::OT.value}> ?value.
                   } ORDER BY ?data_entry"
-              FourStore.query(sparql, accept).split("\n").each_with_index do |value,i|
-                data_entries[i] = Array.new(features.size) unless data_entries[i]
-                data_entries[i] << value
+              FourStore.query(sparql, accept).split("\n").each do |value|
+                data_entries << value
               end
             end
-            data_entries.each{|data_entry| table << ["\"#{compound.inchi}\""] + data_entry}
+            row = ["\"#{compound.inchi}\""] + data_entries
+            row = row.each_with_index.collect { |value,idx| (quoted_features.include?(idx) ? "\"#{value}\"" : value) }
+            table << row
           end
         end
         table
@@ -437,7 +444,7 @@ module OpenTox
       r
     end
 
-    # Create or updata a resource
+    # Create or update a resource
     put "/dataset/:id/?" do
       parse_put
     end
