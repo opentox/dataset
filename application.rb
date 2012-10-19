@@ -3,9 +3,10 @@
 # Author: Christoph Helma, Andreas Maunz
 
 require 'roo'
+require 'base64'
 
 # Library code
-$logger.debug "Dataset booting: #{$compound.collect{|k,v| "#{k}: '#{v}'"} }"
+$logger.debug "Dataset booting: #{$dataset.collect{|k,v| "#{k}: '#{v}'"} }"
 Dir['./lib/utils/shims/*.rb'].each { |f| require f } # Shims for legacy code
 Dir['./lib/utils/*.rb'].each { |f| require f } # Utils for Libs
 Dir['./lib/compound/*.rb'].each { |f| require f } # Libs
@@ -24,7 +25,12 @@ module OpenTox
 
       def from_csv(csv)
         table = CSV.parse(csv)
-        table.collect! { |row| row.collect! { |val| val.nil? ? "" : val } }
+        # CSVs with unexpected encodings may have blanks instead of nil
+        table.collect! { |row| 
+          row.collect! { |val| 
+            (val.class == String and val.strip == "") ? nil : val 
+          } 
+        }
         from_table table
       end
 
@@ -81,7 +87,7 @@ module OpenTox
         puts dataset.uri
         feature_names = table.shift.collect{|f| f.strip}
         puts feature_names.inspect
-        dataset.append RDF::OT.Warnings, "Duplicated features in table header." unless feature_names.size == feature_names.uniq.size
+        dataset.append RDF::OT.Warnings, "Duplicate features in table header." unless feature_names.size == feature_names.uniq.size
         compound_format = feature_names.shift.strip
         bad_request_error "#{compound_format} is not a supported compound format. Accepted formats: URI, SMILES, InChI." unless compound_format =~ /URI|URL|SMILES|InChI/i
         features = []
@@ -141,7 +147,7 @@ module OpenTox
         compounds.duplicates.each do |compound|
           positions = []
           compounds.each_with_index{|c,i| positions << i+1 if c.uri == compound.uri}
-          dataset.append RDF::OT.Warnings, "Duplicated compound #{compound.uri} at rows #{positions.join(', ')}. Entries are accepted, assuming that measurements come from independent experiments." 
+          dataset.append RDF::OT.Warnings, "Duplicate compound #{compound.uri} at rows #{positions.join(', ')}. Entries are accepted, assuming that measurements come from independent experiments." 
         end
         puts dataset.to_ntriples
         dataset.to_ntriples
@@ -153,7 +159,7 @@ module OpenTox
 
         # features
         feature_names = table.shift.collect{|f| f.strip}
-        @warnings << "Duplicated features in table header." unless feature_names.size == feature_names.uniq.size
+        @warnings << "Duplicate features in table header." unless feature_names.size == feature_names.uniq.size
         compound_format = feature_names.shift.strip
         bad_request_error "#{compound_format} is not a supported compound format. Accepted formats: URI, SMILES, InChI." unless compound_format =~ /URI|URL|SMILES|InChI/i
         features = []
@@ -162,21 +168,20 @@ module OpenTox
           feature = OpenTox::Feature.new File.join($feature[:uri], SecureRandom.uuid)
           feature[RDF::DC.title] = f
           features << feature
-          values = table.collect{|row| row[i+1].strip unless row[i+1].nil?}.uniq.compact # skip compound column
-          low_diff_values=false
-          if values.size <= 3 # max classes
+          values = table.collect{|row| row[i+1].strip! unless row[i+1].nil?}.uniq.compact
+          types = values.collect{|v| feature_type(v)}.uniq
+          if values.size == 0
+          elsif values.size <= 5 # max classes
             feature.append RDF.type, RDF::OT.NominalFeature
             feature.append RDF.type, RDF::OT.StringFeature
             feature[RDF::OT.acceptValue] = values
-            low_diff_values=true
           end
-          types = values.collect{|v| feature_type(v)}.uniq
-          if types.include? RDF::OT.NominalFeature and !low_diff_values
-            feature.append RDF.type, RDF::OT.NominalFeature
+          if types.size == 1 and types[0] == RDF::OT.NumericFeature
+            feature.append RDF.type, RDF::OT.NumericFeature 
           else
-            types.each { |t| 
-              feature.append RDF.type, t unless t.nil? 
-            }
+            feature.append RDF.type, RDF::OT.NominalFeature # only nominal type for mixed cases
+            feature.append RDF.type, RDF::OT.StringFeature
+            feature[RDF::OT.acceptValue] = values
           end
           feature.put
           ntriples << "<#{feature.uri}> <#{RDF.type}> <#{RDF::OT.Feature}>."
@@ -186,7 +191,6 @@ module OpenTox
         # compounds and values
         compound_uris = []
         table.each_with_index do |values,j|
-          values.collect!{|v| v.nil? ? nil : v.strip }
           compound = values.shift
           begin
             case compound_format
@@ -233,7 +237,7 @@ module OpenTox
         compound_uris.duplicates.each do |uri|
           positions = []
           compound_uris.each_with_index{|c,i| positions << i+1 if c == uri}
-          @warnings << "Duplicated compound #{uri} at rows #{positions.join(', ')}. Entries are accepted, assuming that measurements come from independent experiments." 
+          @warnings << "Duplicate compound #{uri} at rows #{positions.join(', ')}. Entries are accepted, assuming that measurements come from independent experiments." 
         end
 
         ntriples << "<#{@uri}> <#{RDF::OT.Warnings}> \"#{@warnings.join('\n')}\" ."
