@@ -30,7 +30,7 @@ module OpenTox
         feature.title = title
         feature.metadata = metadata
         feature.put
-      else    
+      elsif feature_uri
         feature = OpenTox::Feature.find(feature_uri, @subjectid)
       end     
       feature
