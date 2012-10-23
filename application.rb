@@ -165,48 +165,23 @@ module OpenTox
           features = []
           ignored_feature_indices = []
           feature_names.each_with_index do |f,i|
-            feature_existing = OpenTox::Feature.find_by_title(f,{})
-            feature_new = OpenTox::Feature.new File.join($feature[:uri], SecureRandom.uuid)
-            feature_new[RDF::DC.title] = f
             values = table.collect{|row| val=row[i+1]; val.strip! unless val.nil?; val }.uniq.compact
             types = values.collect{|v| feature_type(v)}.uniq
-            if values.size == 0
-              # AM: 'Empty' feature
+            metadata = {} 
+            if values.size == 0 # empty feature
             elsif values.size <= 5 # max classes
-              feature_new.append RDF.type, [ RDF::OT.NominalFeature, RDF::OT.StringFeature ]
-              feature_new.append RDF::OT.acceptValue, values
+              metadata[RDF.type] = [ RDF::OT.NominalFeature, RDF::OT.StringFeature ]
+              metadata[RDF::OT.acceptValue] = values
             end
             if types.size == 1 and types[0] == RDF::OT.NumericFeature
-              feature_new.append RDF.type, RDF::OT.NumericFeature 
+              metadata[RDF.type] = [] unless metadata[RDF.type]
+              metadata[RDF.type] << RDF::OT.NumericFeature 
             else
-              feature_new.append RDF.type, [ RDF::OT.NominalFeature, RDF::OT.StringFeature ] # only nominal type for mixed cases
-              feature_new.append RDF::OT.acceptValue, values
+              metadata[RDF.type] = [ RDF::OT.NominalFeature, RDF::OT.StringFeature ] # only nominal type for mixed cases
+              metadata[RDF::OT.acceptValue] = values
             end
-
-            # Check for equality of features
-            features_equal = true
-            if feature_new and feature_existing
-              [ RDF.type, RDF::OT.acceptValue ].each { |predicate|
-                unless (
-                  ( feature_new[predicate].nil? and
-                    feature_existing[predicate].nil? ) or
-                  ( feature_new[predicate] and
-                    feature_existing[predicate] and
-                    feature_new[predicate].sort == feature_existing[predicate].sort )
-                )
-                  features_equal = false
-                end
-              }
-            end
-
-            if features_equal
-              features << feature_existing
-              feature = feature_existing
-            else
-              features << feature_new
-              feature_new.put
-              feature = feature_new
-            end
+            feature = OpenTox::Feature.find_by_title(f,metadata) # AM: find or generate
+            features << feature unless feature.nil?
             ntriples << "<#{feature.uri}> <#{RDF.type}> <#{RDF::OT.Feature}>."
             ntriples << "<#{feature.uri}> <#{RDF::OLO.index}> #{i} ."
           end

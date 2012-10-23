@@ -16,23 +16,41 @@ module OpenTox
       f
     end
 
-    # Load a feature given its title. create it if not present, using metadata.
-    # When metadata is empty, nil is returned
+    # Load or create a feature given its title and metadata
+    # Create it if: a) not present, or b) present, but differs in metadata
+    # Newly created features are stored at the backend
     # @param[String] title Feature title
     # @param[Hash] metadata Feature metadata
-    # @return [OpenTox::Feature] Feature object with the full data, or nil, if not found
+    # @return [OpenTox::Feature] Feature object with the full data, or nil
     def self.find_by_title(title, metadata)
-      feature_uri = nil
+      metadata[RDF.type] << RDF::OT.Feature unless (metadata[RDF.type] and metadata[RDF.type].include?(RDF::OT.Feature))
+      metadata[RDF::DC.title] = title unless (metadata[RDF::DC.title] and metadata[RDF::DC.title].include?(title))
+      feature = feature_new = OpenTox::Feature.new File.join($feature[:uri], SecureRandom.uuid), @subjectid
+      feature_new.metadata = metadata
       sparql = "SELECT DISTINCT ?feature WHERE { ?feature <#{RDF.type}> <#{RDF::OT['feature'.capitalize]}>. ?feature <#{RDF::DC.title}> '#{title.to_s}' }"
-      feature_uri = OpenTox::Backend::FourStore.query(sparql,"text/uri-list").split("\n").first # is nil for non-existing feature
-      if feature_uri.nil? and metadata.size>0
-        feature = OpenTox::Feature.new feature_uri, @subjectid
-        feature.title = title
-        feature.metadata = metadata
-        feature.put
-      elsif feature_uri
-        feature = OpenTox::Feature.find(feature_uri, @subjectid)
-      end     
+      feature_uris = OpenTox::Backend::FourStore.query(sparql,"text/uri-list").split("\n")
+      features_equal = false # relevant also when no features found
+      feature_uris.each_with_index { |feature_uri,idx|
+        feature_existing = OpenTox::Feature.find(feature_uri, @subjectid)
+        if (feature_new.metadata.size+1 == feature_existing.metadata.size) # +1 due to title
+          features_equal = metadata.keys.collect { |predicate|
+            unless ( predicate == RDF::DC.title )
+              if feature_new[predicate].class == feature_existing[predicate].class
+                case feature_new[predicate].class.to_s
+                  when "Array" then (feature_new[predicate].sort == feature_existing[predicate].sort)
+                  else (feature_new[predicate] == feature_existing[predicate])
+                end
+              end
+            else
+              true
+            end
+          }.uniq == [true]
+        end
+        (feature=feature_existing and break) if features_equal
+      }
+      unless features_equal
+        feature_new.put 
+      end
       feature
     end
 
