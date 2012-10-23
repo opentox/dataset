@@ -23,8 +23,9 @@ module OpenTox
     # @param[Hash] metadata Feature metadata
     # @return [OpenTox::Feature] Feature object with the full data, or nil
     def self.find_by_title(title, metadata)
-      metadata[RDF.type] << RDF::OT.Feature unless (metadata[RDF.type] and metadata[RDF.type].include?(RDF::OT.Feature))
-      metadata[RDF::DC.title] = title unless (metadata[RDF::DC.title] and metadata[RDF::DC.title].include?(title))
+      metadata[RDF.type] = [] unless metadata[RDF.type]
+      metadata[RDF.type] << RDF::OT.Feature unless metadata[RDF.type].include?(RDF::OT.Feature)
+      metadata[RDF::DC.title] = title unless (metadata[RDF::DC.title])
       feature = feature_new = OpenTox::Feature.new File.join($feature[:uri], SecureRandom.uuid), @subjectid
       feature_new.metadata = metadata
       sparql = "SELECT DISTINCT ?feature WHERE { ?feature <#{RDF.type}> <#{RDF::OT['feature'.capitalize]}>. ?feature <#{RDF::DC.title}> '#{title.to_s}' }"
