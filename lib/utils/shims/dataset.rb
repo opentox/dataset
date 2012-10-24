@@ -1,5 +1,9 @@
-# Shims for translation to the new architecture (TM).
-# Author: Andreas Maunz, 2012
+=begin
+* Name: dataset.rb
+* Description: Dataset shims
+* Author: Andreas Maunz <andreas@maunz.de>
+* Date: 10/2012
+=end
 
 module OpenTox
 
@@ -43,17 +47,17 @@ module OpenTox
     end
 
     # Create compounds positions map
-    # @return [Hash] A hash with keys compound uris and values compound positions
+    # @return [Hash] A hash with keys compound uris and values compound position arrays
     def build_compound_positions
       unless @compound_positions
         @compound_positions = @compounds.each_index.inject({}) { |h,idx| 
           inchi=OpenTox::Compound.new(@compounds[idx].uri).inchi
-          h[inchi] = idx if inchi =~ /InChI/
+          h[inchi] = [] unless h[inchi]
+          h[inchi] << idx if inchi =~ /InChI/
           h
         }
       end
     end
-
 
 
     ### Associative Search Operations
@@ -69,7 +73,7 @@ module OpenTox
 
     # Search a dataset for a compound given its URI
     # @param [String] Compound URI
-    # @return [OpenTox::Compound] Compound object, or nil if not present
+    # @return [OpenTox::Compound] Array of compound objects, or nil if not present
     def find_compound(uri)
       build_compound_positions
       inchi = OpenTox::Compound.new(uri).inchi
@@ -86,7 +90,10 @@ module OpenTox
       build_feature_positions
       inchi = OpenTox::Compound.new(compound_uri).inchi
       if @compound_positions[inchi] && @feature_positions[feature_uri]
-        res = data_entries[@compound_positions[inchi]][@feature_positions[feature_uri]]
+        res = []
+        @compound_positions[inchi].each { |idx|
+          res << data_entries[idx][@feature_positions[feature_uri]]
+        }
       end
       res
     end

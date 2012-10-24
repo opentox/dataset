@@ -1,5 +1,12 @@
 #OT_LOGO = File.join(CONFIG[:services]["opentox-validation"],"resources/ot-logo.png")
 
+=begin
+* Name: html.rb
+* Description: Tools to provide html output
+* Author: Andreas Maunz <andreas@maunz.de>
+* Date: 10/2012
+=end
+
 # AM: needed since this gem has a nested directory structure
 require 'sinatra/url_for'
 
