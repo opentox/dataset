@@ -3,11 +3,10 @@
 # Author: Christoph Helma, Andreas Maunz
 
 require 'roo'
+require 'sinatra/url_for'
 
 # Library code
 $logger.debug "Dataset booting: #{$dataset.collect{|k,v| "#{k}: '#{v}'"} }"
-Dir['./lib/utils/shims/*.rb'].each { |f| require f } # Shims for legacy code
-Dir['./lib/utils/*.rb'].each { |f| require f } # Utils for Libs
 Dir['./lib/compound/*.rb'].each { |f| require f } # Libs
 Dir['./lib/*.rb'].each { |f| require f } # Libs
 Dir['./webapp/*.rb'].each { |f| require f } # Webapps
