@@ -294,16 +294,15 @@ module OpenTox
         table  = []
         if ordered?
           sparql = "SELECT DISTINCT ?s FROM <#{@uri}> WHERE {?s <#{RDF.type}> <#{RDF::OT.Feature}> . ?s <#{RDF::OLO.index}> ?i} ORDER BY ?i"
-          features = FourStore.query(sparql, accept).split("\n").collect{|uri| OpenTox::Feature.new uri}
+          features = FourStore.query(sparql, accept).split("\n").collect{|uri| OpenTox::Feature.new uri}.each { |f| f.get }
           quoted_features = features.each_with_index.collect { |f,idx|
-            f.get
             if (f[RDF.type].include?(RDF::OT.NominalFeature) or 
                 f[RDF.type].include?(RDF::OT.StringFeature) and
                !f[RDF.type].include?(RDF::OT.NumericFeature))
               idx+1 
             end
           }.compact
-          table << ["InChI"] + features.collect{ |f| f.get; f[RDF::DC.title] }
+          table << ["InChI"] + features.collect{ |f| "\"" + f[RDF::DC.title] + "\"" }
           sparql = "SELECT DISTINCT ?i FROM <#{@uri}> WHERE {?s <#{RDF.type}> <#{RDF::OT.DataEntry}> . ?s <#{RDF::OLO.index}> ?i} ORDER BY ?i"
           FourStore.query(sparql, accept).split("\n").each do |data_entry_idx|
             sparql = "SELECT DISTINCT ?compound FROM <#{@uri}> WHERE {
@@ -326,16 +325,15 @@ module OpenTox
           end
         else
           sparql = "SELECT DISTINCT ?s FROM <#{@uri}> WHERE {?s <#{RDF.type}> <#{RDF::OT.Feature}>}"
-          features = FourStore.query(sparql, accept).split("\n").collect{|uri| OpenTox::Feature.new uri}
+          features = FourStore.query(sparql, accept).split("\n").collect{|uri| OpenTox::Feature.new uri}.each { |f| f.get }
           quoted_features = features.each_with_index.collect { |f,idx|
-            f.get
             if (f[RDF.type].include?(RDF::OT.NominalFeature) or 
                 f[RDF.type].include?(RDF::OT.StringFeature) and
                !f[RDF.type].include?(RDF::OT.NumericFeature))
               idx+1 
             end
           }.compact
-          table << ["InChI"] + features.collect{ |f| f.get; f[RDF::DC.title] }
+          table << ["InChI"] + features.collect{ |f| "\"" + f[RDF::DC.title] + "\"" }
           sparql = "SELECT ?s FROM <#{@uri}> WHERE {?s <#{RDF.type}> <#{RDF::OT.Compound}>. }"
           compounds = FourStore.query(sparql, accept).split("\n").collect{|uri| OpenTox::Compound.new uri}
           compounds.each do |compound|
