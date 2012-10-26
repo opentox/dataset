@@ -303,26 +303,24 @@ module OpenTox
             end
           }.compact
           table << ["InChI"] + features.collect{ |f| "\"" + f[RDF::DC.title] + "\"" }
-          sparql = "SELECT DISTINCT ?i FROM <#{@uri}> WHERE {?s <#{RDF.type}> <#{RDF::OT.DataEntry}> . ?s <#{RDF::OLO.index}> ?i} ORDER BY ?i"
-          FourStore.query(sparql, accept).split("\n").each do |data_entry_idx|
-            sparql = "SELECT DISTINCT ?compound FROM <#{@uri}> WHERE {
-              ?data_entry <#{RDF::OLO.index}> #{data_entry_idx} ;
-                <#{RDF::OT.compound}> ?compound. }"
-            compound = OpenTox::Compound.new FourStore.query(sparql, accept).strip
-            sparql = "SELECT ?value FROM <#{@uri}> WHERE {
-              ?data_entry <#{RDF::OLO.index}> #{data_entry_idx} ;
-                <#{RDF::OT.values}> ?v .
-              ?v <#{RDF::OT.feature}> ?f;
-                <#{RDF::OT.value}> ?value .
-              ?f <#{RDF::OLO.index}> ?i.
 
-                } ORDER BY ?i"
-            values = FourStore.query(sparql,accept).split("\n")
-            # Fill up trailing empty cells
-            row = ["\"#{compound.inchi}\""] + values.fill("",values.size,features.size-values.size)
-            row = row.each_with_index.collect { |value,idx| (quoted_features.include?(idx) ? "\"#{value}\"" : value) }
-            table << row
-          end
+          sparql = "SELECT DISTINCT ?compound FROM <#{@uri}> WHERE {
+            ?s <#{RDF.type}> <#{RDF::OT.DataEntry}> ;
+               <#{RDF::OLO.index}> ?cidx;
+               <#{RDF::OT.compound}> ?compound
+            } ORDER BY ?cidx"
+          compounds = FourStore.query(sparql, accept).split("\n").collect { |cmpd| OpenTox::Compound.new cmpd.strip } 
+          sparql = "SELECT ?value FROM <#{@uri}> WHERE {
+            ?data_entry <#{RDF::OLO.index}> ?cidx ;
+                        <#{RDF::OT.values}> ?v .
+            ?v          <#{RDF::OT.feature}> ?f;
+                        <#{RDF::OT.value}> ?value .
+            ?f          <#{RDF::OLO.index}> ?fidx.
+            } ORDER BY ?cidx ?fidx"
+          values = FourStore.query(sparql,accept).split("\n")
+          values.each_slice(features.size).each_with_index { |vals,row_idx|
+            table << ["\"#{compounds[row_idx].inchi}\""] + vals.each_with_index.collect { |value,col_idx| (quoted_features.include?(col_idx) ? "\"#{value}\"" : value) }
+          }
         else
           sparql = "SELECT DISTINCT ?s FROM <#{@uri}> WHERE {?s <#{RDF.type}> <#{RDF::OT.Feature}>}"
           features = FourStore.query(sparql, accept).split("\n").collect{|uri| OpenTox::Feature.new uri}.each { |f| f.get }
