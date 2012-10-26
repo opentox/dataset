@@ -293,7 +293,7 @@ module OpenTox
         accept = "text/uri-list"
         table  = []
         if ordered?
-          features = OpenTox::Dataset.find_features(@uri)
+          features = OpenTox::Dataset.find_features_sparql(@uri)
           features.each { |feat| feat.get }
           quoted_features = features.collect { |feat|
             (feat[RDF.type].include?(RDF::OT.NominalFeature) or 
@@ -301,8 +301,8 @@ module OpenTox
             !feat[RDF.type].include?(RDF::OT.NumericFeature))
           }
           table << ["InChI"] + features.collect{ |f| "\"" + f[RDF::DC.title] + "\"" }
-          compounds = OpenTox::Dataset.find_compounds(@uri)
-          values = OpenTox::Dataset.find_data_entries(@uri)
+          compounds = OpenTox::Dataset.find_compounds_sparql(@uri)
+          values = OpenTox::Dataset.find_data_entries_sparql(@uri)
           values.each_slice(features.size).each_with_index { |vals,row_idx|
             table << ["\"#{compounds[row_idx].inchi}\""] + vals.each_with_index.collect { |value,col_idx| (quoted_features[col_idx] ? "\"#{value}\"" : value) }
           }
