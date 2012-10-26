@@ -293,33 +293,18 @@ module OpenTox
         accept = "text/uri-list"
         table  = []
         if ordered?
-          sparql = "SELECT DISTINCT ?s FROM <#{@uri}> WHERE {?s <#{RDF.type}> <#{RDF::OT.Feature}> . ?s <#{RDF::OLO.index}> ?i} ORDER BY ?i"
-          features = FourStore.query(sparql, accept).split("\n").collect{|uri| OpenTox::Feature.new uri}.each { |f| f.get }
-          quoted_features = features.each_with_index.collect { |f,idx|
-            if (f[RDF.type].include?(RDF::OT.NominalFeature) or 
-                f[RDF.type].include?(RDF::OT.StringFeature) and
-               !f[RDF.type].include?(RDF::OT.NumericFeature))
-              idx+1 
-            end
-          }.compact
+          features = OpenTox::Dataset.find_features(@uri)
+          features.each { |feat| feat.get }
+          quoted_features = features.collect { |feat|
+            (feat[RDF.type].include?(RDF::OT.NominalFeature) or 
+             feat[RDF.type].include?(RDF::OT.StringFeature) and
+            !feat[RDF.type].include?(RDF::OT.NumericFeature))
+          }
           table << ["InChI"] + features.collect{ |f| "\"" + f[RDF::DC.title] + "\"" }
-
-          sparql = "SELECT DISTINCT ?compound FROM <#{@uri}> WHERE {
-            ?s <#{RDF.type}> <#{RDF::OT.DataEntry}> ;
-               <#{RDF::OLO.index}> ?cidx;
-               <#{RDF::OT.compound}> ?compound
-            } ORDER BY ?cidx"
-          compounds = FourStore.query(sparql, accept).split("\n").collect { |cmpd| OpenTox::Compound.new cmpd.strip } 
-          sparql = "SELECT ?value FROM <#{@uri}> WHERE {
-            ?data_entry <#{RDF::OLO.index}> ?cidx ;
-                        <#{RDF::OT.values}> ?v .
-            ?v          <#{RDF::OT.feature}> ?f;
-                        <#{RDF::OT.value}> ?value .
-            ?f          <#{RDF::OLO.index}> ?fidx.
-            } ORDER BY ?cidx ?fidx"
-          values = FourStore.query(sparql,accept).split("\n")
+          compounds = OpenTox::Dataset.find_compounds(@uri)
+          values = OpenTox::Dataset.find_data_entries(@uri)
           values.each_slice(features.size).each_with_index { |vals,row_idx|
-            table << ["\"#{compounds[row_idx].inchi}\""] + vals.each_with_index.collect { |value,col_idx| (quoted_features.include?(col_idx) ? "\"#{value}\"" : value) }
+            table << ["\"#{compounds[row_idx].inchi}\""] + vals.each_with_index.collect { |value,col_idx| (quoted_features[col_idx] ? "\"#{value}\"" : value) }
           }
         else
           sparql = "SELECT DISTINCT ?s FROM <#{@uri}> WHERE {?s <#{RDF.type}> <#{RDF::OT.Feature}>}"
