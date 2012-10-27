@@ -303,6 +303,7 @@ module OpenTox
           table << ["InChI"] + features.collect{ |f| "\"" + f[RDF::DC.title] + "\"" }
           compounds = OpenTox::Dataset.find_compounds_sparql(@uri)
           values = OpenTox::Dataset.find_data_entries_sparql(@uri)
+          values += Array.new(compounds.size*features.size-values.size, "")
           values.each_slice(features.size).each_with_index { |vals,row_idx|
             table << ["\"#{compounds[row_idx].inchi}\""] + vals.each_with_index.collect { |value,col_idx| (quoted_features[col_idx] ? "\"#{value}\"" : value) }
           }
