@@ -294,13 +294,14 @@ module OpenTox
         table  = []
         if ordered?
           features = OpenTox::Dataset.find_features_sparql(@uri)
-          features.each { |feat| feat.get }
-          quoted_features = features.collect { |feat|
-            (feat[RDF.type].include?(RDF::OT.NominalFeature) or 
-             feat[RDF.type].include?(RDF::OT.StringFeature) and
-            !feat[RDF.type].include?(RDF::OT.NumericFeature))
+          sparql_constraints = {:type => RDF.type, :title => RDF::DC.title}
+          feature_props = OpenTox::Dataset.find_props_sparql(features.collect { |f| f.uri }, sparql_constraints)
+          quoted_features = []; feature_names = []
+          features.each { |feature|
+              quoted_features << feature_props[feature.uri][:type].include?(RDF::OT.NominalFeature)
+              feature_names << feature_props[feature.uri][:title][0].strip
           }
-          table << ["InChI"] + features.collect{ |f| "\"" + f[RDF::DC.title] + "\"" }
+          table << ["InChI"] + feature_names
           compounds = OpenTox::Dataset.find_compounds_sparql(@uri)
           values = OpenTox::Dataset.find_data_entries_sparql(@uri)
           values += Array.new(compounds.size*features.size-values.size, "")
