@@ -453,7 +453,13 @@ module OpenTox
     get '/dataset/:id/metadata' do
       case @accept
       when "application/rdf+xml", "text/turtle", "text/plain"
-        sparql = "CONSTRUCT {?s ?p ?o.} FROM <#{@uri}> WHERE { ?s ?p ?o. <#{@uri}> ?p ?o. }"
+        sparql = "CONSTRUCT {?s ?p ?o.} FROM <#{@uri}> WHERE { 
+          { ?s ?p ?o. <#{@uri}> <#{RDF.type}> ?o. } UNION 
+          { ?s ?p ?o. <#{@uri}> <#{RDF::DC.title}> ?o.} UNION 
+          { ?s ?p ?o. <#{@uri}> <#{RDF::DC.creator}> ?o.} UNION 
+          { ?s ?p ?o. <#{@uri}> <#{RDF::OT.Warnings}> ?o.}  UNION 
+          { ?s ?p ?o. <#{@uri}> <#{RDF::OT.hasSource}> ?o.} 
+        } "
         FourStore.query sparql, @accept
       else
         bad_request_error "'#{@accept}' is not a supported content type."
@@ -496,7 +502,15 @@ module OpenTox
     get '/dataset/:id/allnde' do
       case @accept
       when "application/rdf+xml", "text/turtle", "text/plain"
-        sparql = "CONSTRUCT {?s ?p ?o.} FROM <#{@uri}> WHERE { { ?s ?p ?o.  <#{@uri}> ?p ?o. } UNION { ?s ?p ?o.  ?s <#{RDF.type}> <#{RDF::OT.Feature}> } UNION { ?s ?p ?o.  ?s <#{RDF.type}> <#{RDF::OT.Compound}> } UNION { ?s ?p ?o.  ?s <#{RDF.type}> <#{RDF::OT.Parameter}> }}"
+        sparql = "CONSTRUCT {?s ?p ?o.} FROM <#{@uri}> WHERE { 
+          { ?s ?p ?o. <#{@uri}> <#{RDF.type}> ?o. } UNION 
+          { ?s ?p ?o. <#{@uri}> <#{RDF::DC.title}> ?o.} UNION 
+          { ?s ?p ?o. <#{@uri}> <#{RDF::DC.creator}> ?o.} UNION 
+          { ?s ?p ?o. <#{@uri}> <#{RDF::OT.Warnings}> ?o.} UNION 
+          { ?s ?p ?o. <#{@uri}> <#{RDF::OT.hasSource}> ?o.} UNION 
+          { ?s ?p ?o. ?s        <#{RDF.type}> <#{RDF::OT.Feature}> } UNION 
+          { ?s ?p ?o. ?s        <#{RDF.type}> <#{RDF::OT.Parameter}> }
+        }"
       else
         bad_request_error "'#{@accept}' is not a supported content type."
       end
