@@ -453,7 +453,7 @@ module OpenTox
     get '/dataset/:id/metadata' do
       case @accept
       when "application/rdf+xml", "text/turtle", "text/plain"
-        sparql = "CONSTRUCT {?s ?p ?o.} FROM <#{@uri}> WHERE {<#{@uri}> ?p ?o. }"
+        sparql = "CONSTRUCT {?s ?p ?o.} FROM <#{@uri}> WHERE { ?s ?p ?o. <#{@uri}> ?p ?o. }"
         FourStore.query sparql, @accept
       else
         bad_request_error "'#{@accept}' is not a supported content type."
@@ -462,13 +462,13 @@ module OpenTox
 
     # Get a list of all features
     # @param [Header] Accept one of `application/rdf+xml, text/turtle, text/plain, text/uri-list` (default application/rdf+xml)
-    # @return [application/rdf+xml, text/turtle, text/plain, text/uri-list] Feature list 
+    # @return [application/rdf+xml, text/turtle, text/plain, text/uri-list] Feature data
     get '/dataset/:id/features' do
       case @accept
       when "application/rdf+xml", "text/turtle", "text/plain"
         sparql = "CONSTRUCT {?s ?p ?o.} FROM <#{@uri}> WHERE {?s <#{RDF.type}> <#{RDF::OT.Feature}>; ?p ?o. }"
       when "text/uri-list"
-        sparql = "SELECT DISTINCT ?s FROM <#{@uri}> WHERE {?s <#{RDF.type}> <#{RDF::OT.Feature}>. }"
+        sparql = "SELECT DISTINCT ?s FROM <#{@uri}> WHERE {?s <#{RDF.type}> <#{RDF::OT.Feature}>. ?s <#{RDF::OLO.index}> ?idx } ORDER BY ?idx"
       else
         bad_request_error "'#{@accept}' is not a supported content type."
       end
@@ -476,18 +476,34 @@ module OpenTox
     end
 
     # Get a list of all compounds
-    # @return [text/uri-list] Feature list 
+    # @param [Header] Accept one of `application/rdf+xml, text/turtle, text/plain, text/uri-list` (default application/rdf+xml)
+    # @return [application/rdf+xml, text/turtle, text/plain, text/uri-list] Compound data
     get '/dataset/:id/compounds' do
       case @accept
       when "application/rdf+xml", "text/turtle", "text/plain"
         sparql = "CONSTRUCT {?s ?p ?o.} FROM <#{@uri}> WHERE {?s <#{RDF.type}> <#{RDF::OT.Compound}>; ?p ?o. }"
       when "text/uri-list"
-        sparql = "SELECT DISTINCT ?s FROM <#{@uri}> WHERE {?s <#{RDF.type}> <#{RDF::OT.Compound}>. }"
+        sparql = "SELECT DISTINCT ?s FROM <#{@uri}> WHERE {?s <#{RDF.type}> <#{RDF::OT.Compound}>. ?s <#{RDF::OLO.index}> ?idx } ORDER BY ?idx"
       else
         bad_request_error "'#{@accept}' is not a supported content type."
       end
       FourStore.query sparql, @accept
     end
+
+    # Get everything but the data entries
+    # @param [Header] Accept one of `application/rdf+xml, text/turtle, text/plain, text/uri-list` (default application/rdf+xml)
+    # @return [application/rdf+xml, text/turtle, text/plain, text/uri-list] The data
+    get '/dataset/:id/allnde' do
+      case @accept
+      when "application/rdf+xml", "text/turtle", "text/plain"
+        sparql = "CONSTRUCT {?s ?p ?o.} FROM <#{@uri}> WHERE { { ?s ?p ?o.  <#{@uri}> ?p ?o. } UNION { ?s ?p ?o.  ?s <#{RDF.type}> <#{RDF::OT.Feature}> } UNION { ?s ?p ?o.  ?s <#{RDF.type}> <#{RDF::OT.Compound}> } }"
+      else
+        bad_request_error "'#{@accept}' is not a supported content type."
+      end
+      FourStore.query sparql, @accept
+    end
+
+
   end
 end
 
