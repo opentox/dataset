@@ -419,7 +419,6 @@ module OpenTox
 
     get "/dataset/:id/?" do
       #Profiler__::start_profile
-      @accept = "text/html" if @accept == '*/*'
       case @accept
       when "application/rdf+xml", "text/turtle", "text/plain", /html/
         r = FourStore.get(@uri, @accept)
