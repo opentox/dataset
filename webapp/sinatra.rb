@@ -5,9 +5,6 @@
 module OpenTox
   class Application < Service
 
-    # Get url_for support
-    helpers Sinatra::UrlForHelper
-
     # Conveniently accessible from anywhere within the Application class,
     # it negotiates the appropriate output format based on object class
     # and requested MIME type.

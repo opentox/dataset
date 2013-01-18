@@ -12,7 +12,7 @@ module OpenTox
     get '/dataset/*/pc' do
       dataset=params["captures"][0]
       algorithms = YAML::load_file File.join(ENV['HOME'], ".opentox", "config", "pc_descriptors.yaml")
-      list = (algorithms.keys.sort << "AllDescriptors").collect { |name| url_for("/dataset/#{dataset}/pc/#{name}",:full) }.join("\n") + "\n"
+      list = (algorithms.keys.sort << "AllDescriptors").collect { |name| to("/dataset/#{dataset}/pc/#{name}",:full) }.join("\n") + "\n"
       format_output(list)
     end
     
@@ -43,7 +43,7 @@ module OpenTox
     
       if descriptors 
         # Contents
-        algorithm = OpenTox::Algorithm.new(url_for("/dataset/#{dataset}/pc/#{params[:descriptor]}",:full))
+        algorithm = OpenTox::Algorithm.new(to("/dataset/#{dataset}/pc/#{params[:descriptor]}",:full))
         mmdata = {
           DC.title => params[:descriptor],
           DC.creator => "andreas@maunz.de",
@@ -86,7 +86,7 @@ module OpenTox
                                  $task[:uri],
                                  @subjectid,
                                  { RDF::DC.description => "Calculating PC descriptors",
-                                   RDF::DC.creator => url_for("/dataset/#{dataset}/pc",:full)
+                                   RDF::DC.creator => to("/dataset/#{dataset}/pc",:full)
                                  }
                                 ) do |task|
 
@@ -105,8 +105,8 @@ module OpenTox
                { DC.title => key, OT.paramValue => (val.nil? ? "" : val) }
              }
              result_ds[DC.title] = single_cmpd_ds[DC.title]
-             result_ds[DC.creator] = url_for("/dataset/#{dataset}/pc",:full)
-             result_ds[OT.hasSource] = url_for("/dataset/#{dataset}/pc",:full)
+             result_ds[DC.creator] = to("/dataset/#{dataset}/pc",:full)
+             result_ds[OT.hasSource] = to("/dataset/#{dataset}/pc",:full)
            end
            result_ds << [ cmpd ] + single_cmpd_ds.data_entries[0]
          }

@@ -3,7 +3,7 @@
 # Author: Christoph Helma, Andreas Maunz
 
 require 'roo'
-require 'sinatra/url_for'
+require './compound.rb'
 
 # Library code
 $logger.debug "Dataset booting: #{$dataset.collect{|k,v| "#{k}: '#{v}'"} }"
