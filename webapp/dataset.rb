@@ -11,7 +11,8 @@ module OpenTox
     # @return [text/uri-list] URIs
     get '/dataset/*/pc' do
       dataset=params["captures"][0]
-      algorithms = YAML::load_file File.join(ENV['HOME'], ".opentox", "config", "pc_descriptors.yaml")
+      #algorithms = YAML::load_file File.join(ENV['HOME'], ".opentox", "config", "pc_descriptors.yaml")
+      algorithms = YAML::load_file RestClientWrapper.get(File.join($compound[:uri],"pc_descriptors.yaml"))
       list = (algorithms.keys.sort << "AllDescriptors").collect { |name| to("/dataset/#{dataset}/pc/#{name}",:full) }.join("\n") + "\n"
       format_output(list)
     end
@@ -21,7 +22,8 @@ module OpenTox
     get '/dataset/*/pc/*' do
       dataset = params[:captures][0]
       params[:descriptor] = params[:captures][1]
-      descriptors = YAML::load_file File.join(ENV['HOME'], ".opentox", "config", "pc_descriptors.yaml")
+      #descriptors = YAML::load_file File.join(ENV['HOME'], ".opentox", "config", "pc_descriptors.yaml")
+      descriptors = YAML::load_file RestClientWrapper.get(File.join($compound[:uri],"pc_descriptors.yaml"))
       alg_params = [ 
         { DC.description => "Dataset URI", 
           OT.paramScope => "mandatory", 
