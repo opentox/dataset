@@ -90,34 +90,28 @@ module OpenTox
                                  }
                                 ) do |task|
 
-       begin
-         result_ds = OpenTox::Dataset.new(nil,@subjectid)
-         ds=OpenTox::Dataset.find("#{$dataset[:uri]}/#{dataset}",@subjectid)
-         ds.compounds.each { |cmpd|
-           ds_string = RestClient.post("#{$compound[:uri]}/#{cmpd.inchi}/pc", params, {:accept => "application/rdf+xml"})
-           single_cmpd_ds = OpenTox::Dataset.new(OpenTox::Dataset.uri_from_rdf(ds_string),@subjectid)
-           single_cmpd_ds.parse_rdfxml(ds_string)
-           single_cmpd_ds.get(true)
-           unless result_ds.features.size>0 # features present already?
-             result_ds.features = single_cmpd_ds.features # AM: features
-             result_ds.parameters = ["pc_type", "lib", "descriptor"].collect{ |key| # AM: parameters
-               val = single_cmpd_ds.find_parameter_value(key)
-               { DC.title => key, OT.paramValue => (val.nil? ? "" : val) }
-             }
-             result_ds[DC.title] = single_cmpd_ds[DC.title]
-             result_ds[DC.creator] = to("/dataset/#{dataset}/pc",:full)
-             result_ds[OT.hasSource] = to("/dataset/#{dataset}/pc",:full)
-           end
-           result_ds << [ cmpd ] + single_cmpd_ds.data_entries[0]
-         }
-         result_ds.put @subjectid
-         $logger.debug result_ds.uri
-         result_ds.uri
-
-       rescue => e
-         $logger.debug "#{e.class}: #{e.message}"
-         $logger.debug "Backtrace:\n\t#{e.backtrace.join("\n\t")}"
-       end
+       result_ds = OpenTox::Dataset.new(nil,@subjectid)
+       ds=OpenTox::Dataset.find("#{$dataset[:uri]}/#{dataset}",@subjectid)
+       ds.compounds.each { |cmpd|
+         ds_string = RestClient.post("#{$compound[:uri]}/#{cmpd.inchi}/pc", params, {:accept => "application/rdf+xml"})
+         single_cmpd_ds = OpenTox::Dataset.new(OpenTox::Dataset.uri_from_rdf(ds_string),@subjectid)
+         single_cmpd_ds.parse_rdfxml(ds_string)
+         single_cmpd_ds.get(true)
+         unless result_ds.features.size>0 # features present already?
+           result_ds.features = single_cmpd_ds.features # AM: features
+           result_ds.parameters = ["pc_type", "lib", "descriptor"].collect{ |key| # AM: parameters
+             val = single_cmpd_ds.find_parameter_value(key)
+             { DC.title => key, OT.paramValue => (val.nil? ? "" : val) }
+           }
+           result_ds[DC.title] = single_cmpd_ds[DC.title]
+           result_ds[DC.creator] = to("/dataset/#{dataset}/pc",:full)
+           result_ds[OT.hasSource] = to("/dataset/#{dataset}/pc",:full)
+         end
+         result_ds << [ cmpd ] + single_cmpd_ds.data_entries[0]
+       }
+       result_ds.put @subjectid
+       $logger.debug result_ds.uri
+       result_ds.uri
 
       end
       response['Content-Type'] = 'text/uri-list'

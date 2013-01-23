@@ -3,6 +3,7 @@
 # Author: Christoph Helma, Andreas Maunz
 
 require 'roo'
+require 'opentox-server'
 require './compound.rb'
 
 # Library code
