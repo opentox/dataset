@@ -18,7 +18,7 @@ Gem::Specification.new do |s|
 
   # specify any dependencies here; for example:
   s.add_runtime_dependency "opentox-server"
-  s.add_runtime_dependency 'roo', "~>1.10.1"
+  s.add_runtime_dependency 'roo', "=1.10.1" # 1.10.2 is defunct
   s.add_runtime_dependency "openbabel", "~>2.3.1.5"
   s.post_install_message = "Please configure your service in ~/.opentox/config/dataset.rb"
 end

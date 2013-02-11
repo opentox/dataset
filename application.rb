@@ -35,6 +35,7 @@ module OpenTox
 
       def from_spreadsheet spreadsheet
         extensions = { Excel => ".xls", Excelx => ".xlsx", Openoffice => ".ods" }
+        puts params[:file][:tempfile].path 
         input = params[:file][:tempfile].path + ".xls"
         csv_file = params[:file][:tempfile].path + ".csv"
         File.rename params[:file][:tempfile].path, input # roo needs "correct" extensions
@@ -355,8 +356,6 @@ module OpenTox
           end
         end
         table
-=begin
-=end
       end
 
       def feature_type(value)
