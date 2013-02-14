@@ -8,9 +8,9 @@ require './compound.rb'
 
 # Library code
 $logger.debug "Dataset booting: #{$dataset.collect{|k,v| "#{k}: '#{v}'"} }"
-Dir['./lib/compound/*.rb'].each { |f| require f } # Libs
-Dir['./lib/*.rb'].each { |f| require f } # Libs
-Dir['./webapp/*.rb'].each { |f| require f } # Webapps
+Dir['./lib/compound/*.rb'].each { |f| require f; also_reload f } # Libs
+Dir['./lib/*.rb'].each { |f| require f; also_reload f } # Libs
+Dir['./webapp/*.rb'].each { |f| require f; also_reload f } # Webapps
 
 #require 'profiler'
 

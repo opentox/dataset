@@ -11,7 +11,6 @@ module OpenTox
     # @return [text/uri-list] URIs
     get '/dataset/*/pc' do
       dataset=params["captures"][0]
-      #algorithms = YAML::load_file File.join(ENV['HOME'], ".opentox", "config", "pc_descriptors.yaml")
       algorithms = YAML::load_file RestClientWrapper.get(File.join($compound[:uri],"pc_descriptors.yaml"))
       list = (algorithms.keys.sort << "AllDescriptors").collect { |name| to("/dataset/#{dataset}/pc/#{name}",:full) }.join("\n") + "\n"
       format_output(list)
@@ -22,7 +21,6 @@ module OpenTox
     get '/dataset/*/pc/*' do
       dataset = params[:captures][0]
       params[:descriptor] = params[:captures][1]
-      #descriptors = YAML::load_file File.join(ENV['HOME'], ".opentox", "config", "pc_descriptors.yaml")
       descriptors = YAML::load_file RestClientWrapper.get(File.join($compound[:uri],"pc_descriptors.yaml"))
       alg_params = [ 
         { DC.description => "Dataset URI", 
@@ -95,7 +93,7 @@ module OpenTox
        result_ds = OpenTox::Dataset.new(nil,@subjectid)
        ds=OpenTox::Dataset.find("#{$dataset[:uri]}/#{dataset}",@subjectid)
        ds.compounds.each { |cmpd|
-         ds_string = RestClient.post("#{$compound[:uri]}/#{cmpd.inchi}/pc", params, {:accept => "application/rdf+xml"})
+         ds_string = RestClientWrapper.post("#{$compound[:uri]}/#{cmpd.inchi}/pc", params, {:accept => "application/rdf+xml"})
          single_cmpd_ds = OpenTox::Dataset.new(OpenTox::Dataset.uri_from_rdf(ds_string),@subjectid)
          single_cmpd_ds.parse_rdfxml(ds_string)
          single_cmpd_ds.get(true)
