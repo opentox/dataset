@@ -81,171 +81,89 @@ module OpenTox
 
       def from_table table
 
-=begin
-        dataset = OpenTox::Dataset.new @uri
-        puts dataset.uri
+        @warnings = []
+        ntriples = ["<#{@uri}> <#{RDF.type}> <#{RDF::OT.Dataset}>."]
+        ntriples << ["<#{@uri}> <#{RDF.type}> <#{RDF::OT.OrderedDataset}>."]
+
+        # features
         feature_names = table.shift.collect{|f| f.strip}
-        puts feature_names.inspect
-        dataset.append RDF::OT.Warnings, "Duplicate features in table header." unless feature_names.size == feature_names.uniq.size
+        @warnings << "Duplicate features in table header." unless feature_names.size == feature_names.uniq.size
         compound_format = feature_names.shift.strip
         bad_request_error "#{compound_format} is not a supported compound format. Accepted formats: URI, SMILES, InChI." unless compound_format =~ /URI|URL|SMILES|InChI/i
         features = []
+        ignored_feature_indices = []
         feature_names.each_with_index do |f,i|
-          feature = OpenTox::Feature.new File.join($feature[:uri], SecureRandom.uuid)
-          feature[RDF::DC.title] = f
-          features << feature
-          values = table.collect{|row| row[i+1].strip unless row[i+1].nil?}.uniq.compact # skip compound column
-          if values.size <= 3 # max classes
-            feature.append RDF.type, RDF::OT.NominalFeature
-            feature.append RDF.type, RDF::OT.StringFeature
-            feature[RDF::OT.acceptValue] = values
-          else
-            types = values.collect{|v| feature_type(v)}
-            if types.include?(RDF::OT.NominalFeature)
-              dataset.append RDF::OT.Warnings, "Feature #{f} contains nominal and numeric values."
-            else
-              feature.append RDF.type, RDF::OT.NumericFeature
-            end
+          values = table.collect{|row| val=row[i+1]; val.strip! unless val.nil?; val }.uniq.compact
+          types = values.collect{|v| feature_type(v)}.uniq
+          metadata = {} 
+          if values.size == 0 # empty feature
+          elsif values.size <= 5 # max classes
+            metadata[RDF.type] = [ RDF::OT.NominalFeature, RDF::OT.StringFeature ]
+            metadata[RDF::OT.acceptValue] = values
           end
-          feature.put
+          if types.size == 1 and types[0] == RDF::OT.NumericFeature
+            metadata[RDF.type] = [] unless metadata[RDF.type]
+            metadata[RDF.type] << RDF::OT.NumericFeature 
+          else
+            metadata[RDF.type] = [ RDF::OT.NominalFeature, RDF::OT.StringFeature ] # only nominal type for mixed cases
+            metadata[RDF::OT.acceptValue] = values
+          end
+          feature = OpenTox::Feature.find_by_title(f,metadata) # AM: find or generate
+          features << feature unless feature.nil?
+          ntriples << "<#{feature.uri}> <#{RDF.type}> <#{RDF::OT.Feature}>."
+          ntriples << "<#{feature.uri}> <#{RDF::OLO.index}> #{i} ."
         end
-        dataset.features = features
-        compounds = []
+
+        # compounds and values
+        compound_uris = []
         table.each_with_index do |values,j|
-          c = values.shift
-          puts c
-          puts compound_format
-          values.collect!{|v| v.nil? ? nil : v.strip }
-          #begin
+          compound = values.shift
+          begin
             case compound_format
             when /URI|URL/i
-              compound = OpenTox::Compound.new c
+              compound_uri = compound
             when /SMILES/i
-              compound = OpenTox::Compound.from_smiles($compound[:uri], c)
+              compound_uri = OpenTox::Compound.from_smiles($compound[:uri], compound).uri
             when /InChI/i
-              compound = OpenTox::Compound.from_inchi($compound[:uri], URI.decode_www_form_component(c))
+              compound_uri = OpenTox::Compound.from_inchi($compound[:uri], compound).uri
             end
-          #rescue
-            #dataset.append RDF::OT.Warnings, "Cannot parse compound \"#{c}\" at position #{j+2}, all entries are ignored."
-            #next
-          #end
-          unless compound_uri.match(/InChI=/)
-            dataset.append RDF::OT.Warnings, "Cannot parse compound \"#{c}\" at position #{j+2}, all entries are ignored."
+          rescue
+            @warnings << "Cannot parse compound '#{compound}' at position #{j+2}, all entries are ignored." # be careful with double quotes in literals!
             next
           end
-          compounds << compound
+          compound_uris << compound_uri
           unless values.size == features.size
-            dataset.append RDF::OT.Warnings, "Number of values at position #{j+2} (#{values.size}) is different than header size (#{features.size}), all entries are ignored."
+            @warnings << "Number of values at position #{j+2} (#{values.size}) is different than header size (#{features.size}), all entries are ignored."
             next
           end
+          ntriples << "<#{compound_uri}> <#{RDF.type}> <#{RDF::OT.Compound}>."
+          ntriples << "<#{compound_uri}> <#{RDF::OLO.index}> #{j} ."
 
-          dataset << values
+          values.each_with_index do |v,i|
+            @warnings << "Empty value for compound #{compound} (row #{j+2}) and feature \"#{feature_names[i]}\" (column #{i+2})." if v.blank?
+            #@warnings << "Empty value in row #{j+2}, column #{i+2} (feature \"#{feature_names[i]}\")." if v.blank?
+
+            data_entry_node = "_:dataentry"+ j.to_s
+            value_node = data_entry_node+ "_value"+ i.to_s
+            ntriples << "<#{@uri}> <#{RDF::OT.dataEntry}> #{data_entry_node} ."
+            ntriples << "#{data_entry_node} <#{RDF.type}> <#{RDF::OT.DataEntry}> ."
+            ntriples << "#{data_entry_node} <#{RDF::OLO.index}> #{j} ."
+            ntriples << "#{data_entry_node} <#{RDF::OT.compound}> <#{compound_uri}> ."
+            ntriples << "#{data_entry_node} <#{RDF::OT.values}> #{value_node} ."
+            ntriples << "#{value_node} <#{RDF::OT.feature}> <#{features[i].uri}> ."
+            ntriples << "#{value_node} <#{RDF::OT.value}> \"#{v}\" ."
+
+          end
 
         end
-        dataset.compounds = compounds
-        compounds.duplicates.each do |compound|
+        compound_uris.duplicates.each do |uri|
           positions = []
-          compounds.each_with_index{|c,i| positions << i+1 if c.uri == compound.uri}
-          dataset.append RDF::OT.Warnings, "Duplicate compound #{compound.uri} at rows #{positions.join(', ')}. Entries are accepted, assuming that measurements come from independent experiments." 
+          compound_uris.each_with_index{|c,i| positions << i+1 if c == uri}
+          @warnings << "Duplicate compound #{uri} at rows #{positions.join(', ')}. Entries are accepted, assuming that measurements come from independent experiments." 
         end
-        puts dataset.to_ntriples
-        dataset.to_ntriples
-=end
 
-        begin
-          @warnings = []
-          ntriples = ["<#{@uri}> <#{RDF.type}> <#{RDF::OT.Dataset}>."]
-          ntriples << ["<#{@uri}> <#{RDF.type}> <#{RDF::OT.OrderedDataset}>."]
-
-          # features
-          feature_names = table.shift.collect{|f| f.strip}
-          @warnings << "Duplicate features in table header." unless feature_names.size == feature_names.uniq.size
-          compound_format = feature_names.shift.strip
-          bad_request_error "#{compound_format} is not a supported compound format. Accepted formats: URI, SMILES, InChI." unless compound_format =~ /URI|URL|SMILES|InChI/i
-          features = []
-          ignored_feature_indices = []
-          feature_names.each_with_index do |f,i|
-            values = table.collect{|row| val=row[i+1]; val.strip! unless val.nil?; val }.uniq.compact
-            types = values.collect{|v| feature_type(v)}.uniq
-            metadata = {} 
-            if values.size == 0 # empty feature
-            elsif values.size <= 5 # max classes
-              metadata[RDF.type] = [ RDF::OT.NominalFeature, RDF::OT.StringFeature ]
-              metadata[RDF::OT.acceptValue] = values
-            end
-            if types.size == 1 and types[0] == RDF::OT.NumericFeature
-              metadata[RDF.type] = [] unless metadata[RDF.type]
-              metadata[RDF.type] << RDF::OT.NumericFeature 
-            else
-              metadata[RDF.type] = [ RDF::OT.NominalFeature, RDF::OT.StringFeature ] # only nominal type for mixed cases
-              metadata[RDF::OT.acceptValue] = values
-            end
-            feature = OpenTox::Feature.find_by_title(f,metadata) # AM: find or generate
-            features << feature unless feature.nil?
-            ntriples << "<#{feature.uri}> <#{RDF.type}> <#{RDF::OT.Feature}>."
-            ntriples << "<#{feature.uri}> <#{RDF::OLO.index}> #{i} ."
-          end
-
-          # compounds and values
-          compound_uris = []
-          table.each_with_index do |values,j|
-            compound = values.shift
-            begin
-              case compound_format
-              when /URI|URL/i
-                compound_uri = compound
-              when /SMILES/i
-                compound_uri = OpenTox::Compound.from_smiles($compound[:uri], compound).uri
-              when /InChI/i
-                compound_uri = OpenTox::Compound.from_inchi($compound[:uri], compound).uri
-              end
-            rescue
-              @warnings << "Cannot parse compound \"#{compound}\" at position #{j+2}, all entries are ignored."
-              next
-            end
-            unless compound_uri.match(/InChI=/)
-              @warnings << "Cannot parse compound \"#{compound}\" at position #{j+2}, all entries are ignored."
-              next
-            end
-            compound_uris << compound_uri
-            unless values.size == features.size
-              @warnings << "Number of values at position #{j+2} (#{values.size}) is different than header size (#{features.size}), all entries are ignored."
-              next
-            end
-            ntriples << "<#{compound_uri}> <#{RDF.type}> <#{RDF::OT.Compound}>."
-            ntriples << "<#{compound_uri}> <#{RDF::OLO.index}> #{j} ."
-
-            values.each_with_index do |v,i|
-              #@warnings << "Empty value for compound #{compound} (row #{j+2}) and feature \"#{feature_names[i]}\" (column #{i+2})." if v.blank?
-              #@warnings << "Empty value in row #{j+2}, column #{i+2} (feature \"#{feature_names[i]}\")." if v.blank?
-
-              data_entry_node = "_:dataentry"+ j.to_s
-              value_node = data_entry_node+ "_value"+ i.to_s
-              ntriples << "<#{@uri}> <#{RDF::OT.dataEntry}> #{data_entry_node} ."
-              ntriples << "#{data_entry_node} <#{RDF.type}> <#{RDF::OT.DataEntry}> ."
-              ntriples << "#{data_entry_node} <#{RDF::OLO.index}> #{j} ."
-              ntriples << "#{data_entry_node} <#{RDF::OT.compound}> <#{compound_uri}> ."
-              ntriples << "#{data_entry_node} <#{RDF::OT.values}> #{value_node} ."
-              ntriples << "#{value_node} <#{RDF::OT.feature}> <#{features[i].uri}> ."
-              ntriples << "#{value_node} <#{RDF::OT.value}> \"#{v}\" ."
-
-            end
-
-          end
-          compound_uris.duplicates.each do |uri|
-            positions = []
-            compound_uris.each_with_index{|c,i| positions << i+1 if c == uri}
-            @warnings << "Duplicate compound #{uri} at rows #{positions.join(', ')}. Entries are accepted, assuming that measurements come from independent experiments." 
-          end
-
-          ntriples << "<#{@uri}> <#{RDF::OT.Warnings}> \"#{@warnings.join('\n')}\" ."
-          ntriples.join("\n")
-        rescue Exception => e
-          $logger.debug "#{e.class}: #{e.message}"
-          $logger.debug "Backtrace:\n\t#{e.backtrace.join("\n\t")}"
-        end
-=begin
-=end
+        ntriples << "<#{@uri}> <#{RDF::OT.Warnings}> \"#{@warnings.join('\n')}\" ."
+        ntriples.join("\n")
       end
 
 =begin
@@ -392,6 +310,7 @@ module OpenTox
           else
             bad_request_error "#{@content_type} is not a supported content type."
           end
+          #puts @body
           FourStore.put @uri, @body, @content_type
           if params[:file]
             nt = "<#{@uri}> <#{RDF::DC.title}> \"#{params[:file][:filename]}\".\n<#{uri}> <#{RDF::OT.hasSource}> \"#{params[:file][:filename]}\"."
