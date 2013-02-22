@@ -126,11 +126,11 @@ module OpenTox
               compound = OpenTox::Compound.from_inchi($compound[:uri], URI.decode_www_form_component(c))
             end
           #rescue
-            #dataset.append RDF::OT.Warnings, "Cannot parse compound \"#{c}\" at position #{j+2}, all entries are ignored."
+            #dataset.append RDF::OT.Warnings, "Cannot parse compound \'#{c}\' at position #{j+2}, all entries are ignored."
             #next
           #end
           unless compound_uri.match(/InChI=/)
-            dataset.append RDF::OT.Warnings, "Cannot parse compound \"#{c}\" at position #{j+2}, all entries are ignored."
+            dataset.append RDF::OT.Warnings, "Cannot parse compound \'#{c}\' at position #{j+2}, all entries are ignored."
             next
           end
           compounds << compound
@@ -200,11 +200,11 @@ module OpenTox
                 compound_uri = OpenTox::Compound.from_inchi($compound[:uri], compound).uri
               end
             rescue
-              @warnings << "Cannot parse compound \"#{compound}\" at position #{j+2}, all entries are ignored."
+              @warnings << "Cannot parse compound \'#{compound}\' at position #{j+2}, all entries are ignored."
               next
             end
             unless compound_uri.match(/InChI=/)
-              @warnings << "Cannot parse compound \"#{compound}\" at position #{j+2}, all entries are ignored."
+              @warnings << "Cannot parse compound \'#{compound}\' at position #{j+2}, all entries are ignored."
               next
             end
             compound_uris << compound_uri
