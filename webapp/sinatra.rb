@@ -17,7 +17,7 @@ module OpenTox
         case @accept
           when /text\/html/
             content_type "text/html"
-            OpenTox.text_to_html obj
+            obj.to_html
           else
             content_type 'text/uri-list'
             obj
@@ -31,7 +31,7 @@ module OpenTox
             obj.to_rdfxml
           when /text\/html/
             content_type "text/html"
-            OpenTox.text_to_html obj.to_turtle
+            obj.to_html
           else
             content_type "text/turtle"
             obj.to_turtle

@@ -11,7 +11,7 @@ module OpenTox
     #   compound = OpenTox::Compound.from_smiles("c1ccccc1")
     # @param [String] smiles Smiles string
     # @return [OpenTox::Compound] Compound
-    def self.from_smiles service_uri, smiles, subjectid=nil
+    def self.from_smiles smiles, subjectid=nil
 			inchi = obconversion(smiles,'smi','inchi')
       compound = Compound.new(File.join service_uri, inchi)
       compound.inchi = inchi
@@ -22,7 +22,7 @@ module OpenTox
     # Create a compound from inchi string
     # @param [String] smiles InChI string
     # @return [OpenTox::Compound] Compound
-    def self.from_inchi service_uri, inchi, subjectid=nil
+    def self.from_inchi inchi, subjectid=nil
       compound = Compound.new(File.join service_uri, inchi)
       compound.inchi = inchi
       compound
@@ -31,7 +31,7 @@ module OpenTox
     # Create a compound from sdf string
     # @param [String] smiles SDF string
     # @return [OpenTox::Compound] Compound
-    def self.from_sdf service_uri, sdf, subjectid=nil
+    def self.from_sdf sdf, subjectid=nil
 			inchi = obconversion(sdf,'sdf','inchi')
       compound = Compound.new(File.join service_uri, inchi)
       compound.inchi = inchi
