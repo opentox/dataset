@@ -103,6 +103,7 @@ module OpenTox
         compound_uris = []
         table.each_with_index do |values,j|
           compound = values.shift
+          puts "'#{compound}'"
           begin
             case compound_format
             when /URI|URL/i
@@ -111,6 +112,9 @@ module OpenTox
               compound_uri = OpenTox::Compound.from_smiles(compound).uri
             when /InChI/i
               compound_uri = OpenTox::Compound.from_inchi(compound).uri
+            when ""
+              @warnings << "Cannot parse compound '#{compound}' at position #{j+2}, all entries are ignored." # be careful with double quotes in literals! \C in smiles is an illegal Turtle string
+              next
             end
           rescue
             @warnings << "Cannot parse compound '#{compound}' at position #{j+2}, all entries are ignored." # be careful with double quotes in literals! \C in smiles is an illegal Turtle string
