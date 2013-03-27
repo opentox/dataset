@@ -103,7 +103,6 @@ module OpenTox
         compound_uris = []
         table.each_with_index do |values,j|
           compound = values.shift
-          puts "'#{compound}'"
           begin
             case compound_format
             when /URI|URL/i
