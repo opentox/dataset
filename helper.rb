@@ -127,15 +127,15 @@ module OpenTox
           ntriples << "<#{compound_uri}> <#{RDF.type}> <#{RDF::OT.Compound}>."
           ntriples << "<#{compound_uri}> <#{RDF::OLO.index}> #{j} ."
 
+          data_entry_node = "_:dataentry"+ j.to_s
+          ntriples << "<#{@uri}> <#{RDF::OT.dataEntry}> #{data_entry_node} ."
+          ntriples << "#{data_entry_node} <#{RDF.type}> <#{RDF::OT.DataEntry}> ."
+          ntriples << "#{data_entry_node} <#{RDF::OLO.index}> #{j} ."
+          ntriples << "#{data_entry_node} <#{RDF::OT.compound}> <#{compound_uri}> ."
           values.each_with_index do |v,i|
             @warnings << "Empty value for compound '#{compound}' (row #{j+2}) and feature '#{feature_names[i]}' (column #{i+2})." if v.blank?
 
-            data_entry_node = "_:dataentry"+ j.to_s
             value_node = data_entry_node+ "_value"+ i.to_s
-            ntriples << "<#{@uri}> <#{RDF::OT.dataEntry}> #{data_entry_node} ."
-            ntriples << "#{data_entry_node} <#{RDF.type}> <#{RDF::OT.DataEntry}> ."
-            ntriples << "#{data_entry_node} <#{RDF::OLO.index}> #{j} ."
-            ntriples << "#{data_entry_node} <#{RDF::OT.compound}> <#{compound_uri}> ."
             ntriples << "#{data_entry_node} <#{RDF::OT.values}> #{value_node} ."
             ntriples << "#{value_node} <#{RDF::OT.feature}> <#{features[i].uri}> ."
             ntriples << "#{value_node} <#{RDF::OT.value}> \"#{v}\" ."
@@ -186,15 +186,6 @@ module OpenTox
         #to_table
       end
 
-      def compound_uris
-      end
-
-      def features
-      end
-
-      def data_entries
-      end
-
       def to_table
         # TODO: fix and speed up 
         sparql = "SELECT DISTINCT ?s FROM <#{@uri}> WHERE {
@@ -221,82 +212,7 @@ module OpenTox
           r,c,v = row.split("\t")
           table[r.to_i+1][c.to_i+1] = v.to_s
         end
-        table#.inspect
-=begin
-        table = []
-        dataset = OpenTox::Dataset.new @uri
-        table << ["SMILES"] + dataset.features.collect{|f| f.title}
-        dataset.data_entries.each_with_index do |data_entry,i|
-          table << [dataset.compounds[i]] + data_entry
-        end
         table
-=end
-=begin
-        accept = "text/uri-list"
-        table  = []
-        if ordered?
-          features = OpenTox::Dataset.find_features_sparql(@uri)
-          sparql_constraints = {:type => RDF.type, :title => RDF::DC.title}
-          feature_props = OpenTox::Dataset.find_props_sparql(features.collect { |f| f.uri }, sparql_constraints)
-          quoted_features = []; feature_names = []
-          features.each { |feature|
-              quoted_features << feature_props[feature.uri][:type].include?(RDF::OT.NominalFeature)
-              feature_names << "\"#{feature_props[feature.uri][:title][0].strip}\""
-          }
-          compounds = OpenTox::Dataset.find_compounds_sparql(@uri)
-          values = OpenTox::Dataset.find_data_entries_sparql(@uri)
-          values += Array.new(compounds.size*features.size-values.size, "")
-          clim=(compounds.size-1)
-          cidx = fidx = 0
-          num=(!quoted_features[fidx])
-          table = (Array.new((features.size)*(compounds.size))).each_slice(features.size).to_a
-          values.each { |val|
-            unless val.blank?
-              table[cidx][fidx] = (num ? val : "\"#{val}\"")
-            end
-            if (cidx < clim)
-              cidx+=1
-            else
-              cidx=0
-              fidx+=1
-              num=(!quoted_features[fidx])
-            end
-          }
-          table.each_with_index { |row,idx| row.unshift("\"#{compounds[idx].inchi}\"") }
-          table.unshift([ "\"InChI\"" ] + feature_names)
-        else
-          sparql = "SELECT DISTINCT ?s FROM <#{@uri}> WHERE {?s <#{RDF.type}> <#{RDF::OT.Feature}>}"
-          features = FourStore.query(sparql, accept).split("\n").collect{|uri| OpenTox::Feature.new uri}.each { |f| f.get }
-          quoted_features = features.each_with_index.collect { |f,idx|
-            if (f[RDF.type].include?(RDF::OT.NominalFeature) or 
-                f[RDF.type].include?(RDF::OT.StringFeature) and
-               !f[RDF.type].include?(RDF::OT.NumericFeature))
-              idx+1 
-            end
-          }.compact
-          table << ["InChI"] + features.collect{ |f| "\"" + f[RDF::DC.title] + "\"" }
-          sparql = "SELECT ?s FROM <#{@uri}> WHERE {?s <#{RDF.type}> <#{RDF::OT.Compound}>. }"
-          compounds = FourStore.query(sparql, accept).split("\n").collect{|uri| OpenTox::Compound.new uri}
-          compounds.each do |compound|
-            data_entries = []
-            features.each do |feature|
-              sparql = "SELECT ?value FROM <#{@uri}> WHERE {
-                ?data_entry <#{RDF::OT.compound}> <#{compound.uri}>;
-                  <#{RDF::OT.values}> ?v .
-                ?v <#{RDF::OT.feature}> <#{feature.uri}>;
-                  <#{RDF::OT.value}> ?value.
-                  } ORDER BY ?data_entry"
-              FourStore.query(sparql, accept).split("\n").each do |value|
-                data_entries << value
-              end
-            end
-            row = ["\"#{compound.inchi}\""] + data_entries
-            row = row.each_with_index.collect { |value,idx| (quoted_features.include?(idx) ? "\"#{value}\"" : value) }
-            table << row
-          end
-        end
-        table
-=end
       end
 
       def feature_type(value)
