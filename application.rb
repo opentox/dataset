@@ -40,7 +40,7 @@ module OpenTox
     get "/dataset/:id/?" do
       case @accept
       when "application/rdf+xml", "text/turtle", "text/plain", /html/
-        r = FourStore.get(@uri, @accept)
+        r = FourStore.get(@uri.split('?').first, @accept)
       else
         case @accept
         when "text/csv"
