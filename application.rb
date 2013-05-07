@@ -37,6 +37,20 @@ module OpenTox
       parse_put
     end
 
+    head "/dataset/:id/?" do
+      case @accept
+      when "application/rdf+xml", "text/turtle", "text/plain", /html/
+        r = FourStore.list @accept
+        if r =~ /dataset\/#{params[:id]}/
+          true
+        else
+          false
+        end
+      else
+        bad_request_error "'#{@accept}' is not a supported content type."
+      end
+    end
+
     get "/dataset/:id/?" do
       case @accept
       when "application/rdf+xml", "text/turtle", "text/plain", /html/
