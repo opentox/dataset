@@ -37,6 +37,10 @@ module OpenTox
       parse_put
     end
 
+    head "/#{SERVICE}/:id/?" do
+      resource_not_found_error "#{uri} not found." unless FourStore.head(@uri)
+    end
+
     get "/dataset/:id/?" do
       case @accept
       when "application/rdf+xml", "text/turtle", "text/plain", /html/
