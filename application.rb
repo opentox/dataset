@@ -38,7 +38,7 @@ module OpenTox
     end
 
     head "/#{SERVICE}/:id/?" do
-      resource_not_found_error "#{uri} not found." unless FourStore.head(@uri)
+      resource_not_found_error "#{uri} not found." unless FourStore.head(@uri.split('?').first)
     end
 
     get "/dataset/:id/?" do
