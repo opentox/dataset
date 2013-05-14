@@ -250,7 +250,7 @@ module OpenTox
             bad_request_error "#{@content_type} is not a supported content type."
           end
           if params["file"]
-            nt = "<#{@uri}> <#{RDF::DC.title}> \"#{params["file"][:filename]}\".\n<#{uri}> <#{RDF::OT.hasSource}> \"#{params["file"][:filename]}\"."
+            nt = "<#{@uri}> <#{RDF::DC.title}> \"#{params["file"][:filename]}\".\n<#{@uri}> <#{RDF::OT.hasSource}> \"#{params["file"][:filename]}\"."
             FourStore.put(@uri, nt, "text/plain")
           end
           nt ? FourStore.post(@uri, @body, @content_type) : FourStore.put(@uri, @body, @content_type) 
