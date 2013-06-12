@@ -83,14 +83,14 @@ module OpenTox
           metadata = {RDF::DC.title => f}
           if values.size == 0 # empty feature
           elsif values.size <= 5 # max classes
-            metadata[RDF.type] = [ RDF::OT.NominalFeature, RDF::OT.StringFeature ]
+            metadata[RDF.type] = [ RDF::OT.NominalFeature, RDF::OT.StringFeature, RDF::OT.Feature ]
             metadata[RDF::OT.acceptValue] = values
           end
           if types.size == 1 and types[0] == RDF::OT.NumericFeature
             metadata[RDF.type] = [] unless metadata[RDF.type]
-            metadata[RDF.type] << RDF::OT.NumericFeature 
+            metadata[RDF.type] << [RDF::OT.NumericFeature, RDF::OT.Feature]
           else
-            metadata[RDF.type] = [ RDF::OT.NominalFeature, RDF::OT.StringFeature ] # only nominal type for mixed cases
+            metadata[RDF.type] = [ RDF::OT.NominalFeature, RDF::OT.StringFeature, RDF::OT.Feature ] # only nominal type for mixed cases
             metadata[RDF::OT.acceptValue] = values
           end
           feature = OpenTox::Feature.find_or_create metadata, @subjectid # AM: find or generate
