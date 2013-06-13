@@ -69,6 +69,7 @@ module OpenTox
         @warnings = []
         ntriples = ["<#{@uri}> <#{RDF.type}> <#{RDF::OT.Dataset}>."]
         ntriples << ["<#{@uri}> <#{RDF.type}> <#{RDF::OT.OrderedDataset}>."]
+        ntriples << ["<#{@uri}> <#{RDF::DC.date}> \"#{DateTime.now}\"."]
 
         # features
         feature_names = table.shift.collect{|f| f.strip}
