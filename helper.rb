@@ -109,9 +109,19 @@ module OpenTox
             when /URI|URL/i
               compound_uri = compound
             when /SMILES/i
-              compound_uri = OpenTox::Compound.from_smiles(compound).uri
+              c = OpenTox::Compound.from_smiles(compound)
+              if c.inchi.empty?
+                @warnings << "Cannot parse compound '#{compound}' at position #{j+2}, all entries are ignored."
+              else
+                compound_uri = c.uri
+              end
             when /InChI/i
-              compound_uri = OpenTox::Compound.from_inchi(compound).uri
+              compound = OpenTox::Compound.from_inchi(compound)
+              if c.inchi.empty?
+                @warnings << "Cannot parse compound '#{compound}' at position #{j+2}, all entries are ignored."
+              else
+                compound_uri = c.uri
+              end
             when ""
               @warnings << "Cannot parse compound '#{compound}' at position #{j+2}, all entries are ignored." # be careful with double quotes in literals! \C in smiles is an illegal Turtle string
               next
@@ -142,7 +152,6 @@ module OpenTox
             ntriples << "#{value_node} <#{RDF::OT.value}> \"#{v}\" ."
 
           end
-
         end
         compound_uris.duplicates.each do |uri|
           positions = []
