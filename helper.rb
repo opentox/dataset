@@ -155,7 +155,7 @@ module OpenTox
         end
         compound_uris.duplicates.each do |uri|
           positions = []
-          compound_uris.each_with_index{|c,i| positions << i+1 if c == uri}
+          compound_uris.each_with_index{|c,i| positions << i+1 if !c.blank? and c == uri}
           @warnings << "Duplicate compound #{uri} at rows #{positions.join(', ')}. Entries are accepted, assuming that measurements come from independent experiments." 
         end
 
