@@ -94,7 +94,7 @@ module OpenTox
             metadata[RDF.type] = [ RDF::OT.NominalFeature, RDF::OT.StringFeature, RDF::OT.Feature ] # only nominal type for mixed cases
             metadata[RDF::OT.acceptValue] = values
           end
-          feature = OpenTox::Feature.find_or_create metadata, @subjectid # AM: find or generate
+          feature = OpenTox::Feature.find_or_create metadata, @subjectid
           features << feature unless feature.nil?
           ntriples << "<#{feature.uri}> <#{RDF.type}> <#{RDF::OT.Feature}>."
           ntriples << "<#{feature.uri}> <#{RDF::OLO.index}> #{i} ."
