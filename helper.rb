@@ -102,8 +102,10 @@ module OpenTox
 
         # compounds and values
         compound_uris = []
+        r = -1
         table.each_with_index do |values,j|
           compound = values.shift
+          compound_uri = nil
           begin
             case compound_format
             when /URI|URL/i
@@ -112,6 +114,7 @@ module OpenTox
               c = OpenTox::Compound.from_smiles(compound)
               if c.inchi.empty?
                 @warnings << "Cannot parse compound '#{compound}' at position #{j+2}, all entries are ignored."
+                next
               else
                 compound_uri = c.uri
               end
@@ -119,6 +122,7 @@ module OpenTox
               compound = OpenTox::Compound.from_inchi(compound)
               if c.inchi.empty?
                 @warnings << "Cannot parse compound '#{compound}' at position #{j+2}, all entries are ignored."
+                next
               else
                 compound_uri = c.uri
               end
@@ -130,26 +134,32 @@ module OpenTox
             @warnings << "Cannot parse compound '#{compound}' at position #{j+2}, all entries are ignored." # be careful with double quotes in literals! \C in smiles is an illegal Turtle string
             next
           end
+          
+          r += 1
           compound_uris << compound_uri
           unless values.size == features.size
             @warnings << "Number of values at position #{j+2} (#{values.size}) is different than header size (#{features.size}), all entries are ignored."
             next
           end
-          ntriples << "<#{compound_uri}> <#{RDF.type}> <#{RDF::OT.Compound}>."
-          ntriples << "<#{compound_uri}> <#{RDF::OLO.index}> #{j} ."
 
-          data_entry_node = "_:dataentry"+ j.to_s
+          ntriples << "<#{compound_uri}> <#{RDF.type}> <#{RDF::OT.Compound}>."
+          ntriples << "<#{compound_uri}> <#{RDF::OLO.index}> #{r} ."
+          #data_entry_node = "<#{File.join @uri,"dataentry",j.to_s}>" # too slow or not accepted by 4store
+          data_entry_node = "_:dataentry"+ r.to_s
           ntriples << "<#{@uri}> <#{RDF::OT.dataEntry}> #{data_entry_node} ."
           ntriples << "#{data_entry_node} <#{RDF.type}> <#{RDF::OT.DataEntry}> ."
-          ntriples << "#{data_entry_node} <#{RDF::OLO.index}> #{j} ."
+          ntriples << "#{data_entry_node} <#{RDF::OLO.index}> #{r} ."
           ntriples << "#{data_entry_node} <#{RDF::OT.compound}> <#{compound_uri}> ."
           values.each_with_index do |v,i|
-            @warnings << "Empty value for compound '#{compound}' (row #{j+2}) and feature '#{feature_names[i]}' (column #{i+2})." if v.blank?
-
-            value_node = data_entry_node+ "_value"+ i.to_s
-            ntriples << "#{data_entry_node} <#{RDF::OT.values}> #{value_node} ."
-            ntriples << "#{value_node} <#{RDF::OT.feature}> <#{features[i].uri}> ."
-            ntriples << "#{value_node} <#{RDF::OT.value}> \"#{v}\" ."
+            if v.blank?
+              @warnings << "Empty value for compound '#{compound}' (row #{r+2}) and feature '#{feature_names[i]}' (column #{i+2})."
+              next
+            else
+              value_node = data_entry_node+ "_value"+ i.to_s
+              ntriples << "#{data_entry_node} <#{RDF::OT.values}> #{value_node} ."
+              ntriples << "#{value_node} <#{RDF::OT.feature}> <#{features[i].uri}> ."
+              ntriples << "#{value_node} <#{RDF::OT.value}> \"#{v}\" ."
+            end
 
           end
         end

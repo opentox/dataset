@@ -12,20 +12,9 @@ require_relative 'test.rb'
 # Library code
 $logger.debug "Dataset booting: #{$dataset.collect{|k,v| "#{k}: '#{v}'"} }"
 
-require 'profiler'
-
 # Entry point
 module OpenTox
   class Application < Service
-
-    before do
-      #Profiler__::start_profile
-    end
-
-    after do
-      #Profiler__::stop_profile
-      #Profiler__::print_profile($stdout)
-    end
 
     before "/#{SERVICE}/:id/:property" do
       @uri = uri("/#{SERVICE}/#{params[:id]}")
@@ -73,10 +62,10 @@ module OpenTox
     get '/dataset/:id/metadata' do
       case @accept
       when "application/rdf+xml", "text/turtle", "text/plain"
-        sparql = "CONSTRUCT {?s ?p ?o.} FROM <#{@uri}> WHERE { 
-          { ?s ?p ?o.  <#{@uri}> ?p ?o. } UNION
-          { ?s ?p ?o. ?s <#{RDF.type}> <#{RDF::OT.Parameter}> . }
-          FILTER (?p != <#{RDF::OT.dataEntry}>)
+        sparql = "CONSTRUCT {?s ?p ?o.} FROM <#{@uri}> WHERE {
+          { <#{@uri}> ?p ?o.  ?s <#{RDF.type}> <#{RDF::OT.Dataset}>. }
+          UNION { ?s ?p ?o. ?s <#{RDF.type}> <#{RDF::OT.Parameter}> . }
+          MINUS { ?s <#{RDF::OT.dataEntry}> ?o. }
         } "
         FourStore.query sparql, @accept
       else
@@ -107,7 +96,7 @@ module OpenTox
       when "application/rdf+xml", "text/turtle", "text/plain"
         sparql = "CONSTRUCT {?s ?p ?o.} FROM <#{@uri}> WHERE {?s <#{RDF.type}> <#{RDF::OT.Compound}>; ?p ?o. }"
       when "text/uri-list"
-        sparql = "SELECT DISTINCT ?s FROM <#{@uri}> WHERE {?s <#{RDF.type}> <#{RDF::OT.Compound}>. ?s <#{RDF::OLO.index}> ?idx } ORDER BY ?idx"
+        sparql = "SELECT ?s FROM <#{@uri}> WHERE {?s <#{RDF.type}> <#{RDF::OT.Compound}>. ?s <#{RDF::OLO.index}> ?idx } ORDER BY ?idx"
       else
         bad_request_error "'#{@accept}' is not a supported content type."
       end
