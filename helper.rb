@@ -150,6 +150,7 @@ module OpenTox
           ntriples << "#{data_entry_node} <#{RDF.type}> <#{RDF::OT.DataEntry}> ."
           ntriples << "#{data_entry_node} <#{RDF::OLO.index}> #{r} ."
           ntriples << "#{data_entry_node} <#{RDF::OT.compound}> <#{compound_uri}> ."
+          puts values.inspect
           values.each_with_index do |v,i|
             if v.blank?
               @warnings << "Empty value for compound '#{compound}' (row #{r+2}) and feature '#{feature_names[i]}' (column #{i+2})."
