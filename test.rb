@@ -4,7 +4,7 @@ module OpenTox
   class Application < Service
     
     post '/dataset/test/error_in_task/?' do
-      task = OpenTox::Task.run("error_in_task", @uri, @subjectid) do |task|
+      task = OpenTox::Task.run("error_in_task", @uri) do |task|
         sleep 1
         internal_server_error "error_in_task_message"      
       end

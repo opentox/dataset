@@ -94,7 +94,7 @@ module OpenTox
             metadata[RDF.type] = [ RDF::OT.NominalFeature, RDF::OT.StringFeature, RDF::OT.Feature ] # only nominal type for mixed cases
             metadata[RDF::OT.acceptValue] = values
           end
-          feature = OpenTox::Feature.find_or_create metadata, @subjectid
+          feature = OpenTox::Feature.find_or_create metadata
           features << feature unless feature.nil?
           ntriples << "<#{feature.uri}> <#{RDF.type}> <#{RDF::OT.Feature}>."
           ntriples << "<#{feature.uri}> <#{RDF::OLO.index}> #{i} ."
@@ -252,7 +252,7 @@ module OpenTox
       end
 
       def parse_put
-        task = OpenTox::Task.run "Dataset upload", @uri, @subjectid do
+        task = OpenTox::Task.run "Dataset upload", @uri do
           case @content_type
           when "text/plain", "text/turtle", "application/rdf+xml" # no conversion needed
           when "text/csv"
