@@ -181,7 +181,7 @@ module OpenTox
         p = Axlsx::Package.new
         wb = p.workbook
         wb.add_worksheet(:name => "test") do |sheet|
-          to_table.each { |row| sheet.add_row row; puts row }
+          to_table.each { |row| sheet.add_row row }
         end
         p.serialize("test.xlsx")
 

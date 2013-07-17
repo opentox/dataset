@@ -61,11 +61,12 @@ module OpenTox
     # @return [application/rdf+xml] Metadata OWL-DL
     get '/dataset/:id/metadata' do
       case @accept
+          #{ ?s ?p ?o.  ?s <#{RDF.type}> <#{RDF::OT.Dataset}> .}
       when "application/rdf+xml", "text/turtle", "text/plain"
         sparql = "CONSTRUCT {?s ?p ?o.} FROM <#{@uri}> WHERE {
-          { <#{@uri}> ?p ?o.  ?s <#{RDF.type}> <#{RDF::OT.Dataset}>. }
-          UNION { ?s ?p ?o. ?s <#{RDF.type}> <#{RDF::OT.Parameter}> . }
-          MINUS { ?s <#{RDF::OT.dataEntry}> ?o. }
+          { ?s <#{RDF.type}> <#{RDF::OT.Dataset}> ; ?p ?o}
+          UNION { ?s <#{RDF.type}> <#{RDF::OT.Parameter}> ; ?p ?o }
+          MINUS { <#{@uri}> <#{RDF::OT.dataEntry}> ?o. }
         } "
         FourStore.query sparql, @accept
       else
