@@ -254,10 +254,10 @@ module OpenTox
         task = OpenTox::Task.run "Dataset upload", @uri do
           case @content_type
           when "text/plain", "text/turtle", "application/rdf+xml" # no conversion needed
-          when "text/csv"
+          when "text/csv", "text/comma-separated-values"
             @body = from_csv @body
             @content_type = "text/plain"
-          when "application/vnd.ms-excel"
+          when "application/vnd.ms-excel", "application/excel"
             from_spreadsheet Excel
           when "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             from_spreadsheet Excelx
