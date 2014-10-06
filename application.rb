@@ -26,8 +26,11 @@ module OpenTox
       parse_put
     end
 
-    head "/#{SERVICE}/:id/?" do
-      resource_not_found_error "#{uri} not found." unless FourStore.head(@uri.split('?').first)
+    head "/dataset/?" do
+    end
+
+    head '/dataset/:id/?' do
+      halt 404 unless FourStore.head(@uri.split('?').first)
     end
 
     get "/dataset/:id/?" do
