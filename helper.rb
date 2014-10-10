@@ -113,25 +113,24 @@ module OpenTox
             when /SMILES/i
               c = OpenTox::Compound.from_smiles(compound)
               if c.inchi.empty?
-                @warnings << "Cannot parse compound '#{compound}' at position #{j+2}, all entries are ignored."
+                @warnings << "Cannot parse #{compound_format} compound '#{compound}' at position #{j+2}, all entries are ignored."
                 next
               else
                 compound_uri = c.uri
               end
             when /InChI/i
-              compound = OpenTox::Compound.from_inchi(compound)
+              c = OpenTox::Compound.from_inchi(compound)
               if c.inchi.empty?
-                @warnings << "Cannot parse compound '#{compound}' at position #{j+2}, all entries are ignored."
+                @warnings << "Cannot parse #{compound_format} compound '#{compound}' at position #{j+2}, all entries are ignored."
                 next
               else
                 compound_uri = c.uri
               end
-            when ""
-              @warnings << "Cannot parse compound '#{compound}' at position #{j+2}, all entries are ignored." # be careful with double quotes in literals! \C in smiles is an illegal Turtle string
-              next
+            else
+              raise "wrong compound format" #should be checked above
             end
           rescue
-            @warnings << "Cannot parse compound '#{compound}' at position #{j+2}, all entries are ignored." # be careful with double quotes in literals! \C in smiles is an illegal Turtle string
+            @warnings << "Cannot parse #{compound_format} compound '#{compound}' at position #{j+2}, all entries are ignored." # be careful with double quotes in literals! \C in smiles is an illegal Turtle string
             next
           end
           
