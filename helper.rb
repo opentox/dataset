@@ -19,7 +19,7 @@ module OpenTox
       end
 
       def from_spreadsheet spreadsheet
-        extensions = { Excel => ".xls", Excelx => ".xlsx", Openoffice => ".ods" }
+        extensions = { Roo::Excel => ".xls", Roo::Excelx => ".xlsx", Roo::Openoffice => ".ods" }
         input = params[:file][:tempfile].path + ".xls"
         csv_file = params[:file][:tempfile].path + ".csv"
         File.rename params[:file][:tempfile].path, input # roo needs "correct" extensions
@@ -257,11 +257,11 @@ module OpenTox
             @body = from_csv @body
             @content_type = "text/plain"
           when "application/vnd.ms-excel", "application/excel"
-            from_spreadsheet Excel
+            from_spreadsheet Roo::Excel
           when "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            from_spreadsheet Excelx
+            from_spreadsheet Roo::Excelx
           when "application/vnd.oasis.opendocument.spreadsheet"
-            from_spreadsheet Openoffice
+            from_spreadsheet Roo::Openoffice
     #      when "chemical/x-mdl-sdfile"
     #        @body = parse_sdf @body
     #        @content_type = "text/plain"
