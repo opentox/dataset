@@ -180,8 +180,7 @@
                             "text/plain",
                             "text/turtle",
                             "application/rdf+xml",
-                            "text/html",
-                            "text/csv"
+                            "text/html"
                         ]
                     }
                 ],
@@ -189,8 +188,7 @@
                     "text/plain",
                     "text/turtle",
                     "application/rdf+xml",
-                    "text/html",
-                    "text/csv"
+                    "text/html"
                 ],
                 "responses": {
                     "200": {
