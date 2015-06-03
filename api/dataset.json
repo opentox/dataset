@@ -137,6 +137,73 @@
                     }
                 }
             }
+        },
+        "/dataset/{id}/{features_or_compounds}": {
+            "get": {
+                "tags": [
+                    "dataset"
+                ],
+                "description": "Get a list of all datasets",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "Id of the dataset",
+                        "required": true,
+                        "type": "string"
+                    },
+                    {
+                        "name": "features_or_compounds",
+                        "in": "path",
+                        "description": "features or compounds of the dataset",
+                        "required": true,
+                        "type": "string",
+                        "enum": [
+                            "compounds",
+                            "features"
+                        ]
+                    },
+                    {
+                        "name": "subjectid",
+                        "in": "header",
+                        "description": "authorization token if A&A active",
+                        "required": false,
+                        "type": "string"
+                    },
+                    {
+                        "name": "accept",
+                        "in": "header",
+                        "description": "requested Content-type",
+                        "required": true,
+                        "type": "string",
+                        "enum": [
+                            "text/plain",
+                            "text/turtle",
+                            "application/rdf+xml",
+                            "text/html",
+                            "text/csv"
+                        ]
+                    }
+                ],
+                "produces": [
+                    "text/plain",
+                    "text/turtle",
+                    "application/rdf+xml",
+                    "text/html",
+                    "text/csv"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "400": {
+                        "description": "Bad Request"
+                    },
+                    "404": {
+                        "description": "Not Authorized"
+                    }
+                }
+            }
         }
     }
 }
