@@ -81,6 +81,62 @@
                     }
                 }
             }
+        },
+        "/dataset/{id}": {
+            "get": {
+                "tags": [
+                    "dataset"
+                ],
+                "description": "Get a list of all datasets",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "Id of the dataset",
+                        "required": true,
+                        "type": "string"
+                    },
+                    {
+                        "name": "subjectid",
+                        "in": "header",
+                        "description": "authorization token if A&A active",
+                        "required": false,
+                        "type": "string"
+                    },
+                    {
+                        "name": "accept",
+                        "in": "header",
+                        "description": "requested Content-type",
+                        "required": true,
+                        "type": "string",
+                        "enum": [
+                            "application/rdf+xml",
+                            "text/turtle",
+                            "text/plain",
+                            "text/html",
+                            "text/csv"
+                        ]
+                    }
+                ],
+                "produces": [
+                    "application/rdf+xml",
+                    "text/turtle",
+                    "text/plain",
+                    "text/html",
+                    "text/csv"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "400": {
+                        "description": "Bad Request"
+                    },
+                    "404": {
+                        "description": "Not Authorized"
+                    }
+                }
+            }
         }
     }
 }
