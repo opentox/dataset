@@ -1,0 +1,83 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "version": "5.0.0pre1",
+        "title": "OpenTox Dataset service",
+        "description": "An OpenTox REST Webservice. \nStores associations between compounds and features in datasets.\n",
+        "contact": {
+            "name": "Christoph Helma, in silico toxicology"
+        },
+        "license": {
+            "name": "GNU GENERAL PUBLIC LICENSE",
+            "url": "https://github.com/opentox/dataset/blob/master/LICENSE"
+        }
+    },
+    "host": "enm.in-silico.ch",
+    "schemes": [
+        "https"
+    ],
+    "paths": {
+        "/dataset": {
+            "head": {
+                "tags": [
+                    "dataset"
+                ],
+                "description": "for service check",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "503": {
+                        "description": "Service Unavailable"
+                    }
+                }
+            },
+            "get": {
+                "description": "Get a list of all datasets",
+                "parameters": [
+                    {
+                        "name": "accept",
+                        "in": "header",
+                        "description": "requested Content-type",
+                        "required": true,
+                        "type": "string",
+                        "enum": [
+                            "application/rdf+xml",
+                            "text/turtle",
+                            "text/plain",
+                            "text/uri-list",
+                            "text/html",
+                            "application/sparql-results+xml"
+                        ]
+                    },
+                    {
+                        "name": "subjectid",
+                        "in": "header",
+                        "description": "authorization token if A&A active",
+                        "required": false,
+                        "type": "string"
+                    }
+                ],
+                "produces": [
+                    "application/rdf+xml",
+                    "text/turtle",
+                    "text/plain",
+                    "text/uri-list",
+                    "text/html",
+                    "application/sparql-results+xml"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "400": {
+                        "description": "Bad Request"
+                    },
+                    "404": {
+                        "description": "Not Authorized"
+                    }
+                }
+            }
+        }
+    }
+}
