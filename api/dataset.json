@@ -45,11 +45,11 @@
                         "required": true,
                         "type": "string",
                         "enum": [
-                            "application/rdf+xml",
+                            "text/uri-list",
                             "text/turtle",
                             "text/plain",
-                            "text/uri-list",
                             "text/html",
+                            "application/rdf+xml",
                             "application/sparql-results+xml"
                         ]
                     },
@@ -62,11 +62,11 @@
                     }
                 ],
                 "produces": [
-                    "application/rdf+xml",
+                    "text/uri-list",
                     "text/turtle",
                     "text/plain",
-                    "text/uri-list",
                     "text/html",
+                    "application/rdf+xml",
                     "application/sparql-results+xml"
                 ],
                 "responses": {
