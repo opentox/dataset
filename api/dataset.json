@@ -3,7 +3,7 @@
     "info": {
         "version": "5.0.0pre1",
         "title": "OpenTox Dataset service",
-        "description": "An OpenTox REST Webservice. \nStores associations between compounds and features in datasets.\n",
+        "description": "An OpenTox REST Webservice. \\nStores associations between compounds and features in datasets.\\n",
         "contact": {
             "name": "Christoph Helma, in silico toxicology"
         },
@@ -25,10 +25,16 @@
                 "description": "for service check",
                 "responses": {
                     "200": {
-                        "description": "OK"
+                        "$ref": "#/responses/200"
                     },
-                    "503": {
-                        "description": "Service Unavailable"
+                    "400": {
+                        "$ref": "#/responses/400"
+                    },
+                    "401": {
+                        "$ref": "#/responses/401"
+                    },
+                    "404": {
+                        "$ref": "#/responses/404"
                     }
                 }
             },
@@ -54,11 +60,7 @@
                         ]
                     },
                     {
-                        "name": "subjectid",
-                        "in": "header",
-                        "description": "authorization token if A&A active",
-                        "required": false,
-                        "type": "string"
+                        "$ref": "#/parameters/subjectid"
                     }
                 ],
                 "produces": [
@@ -71,13 +73,77 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK"
+                        "$ref": "#/responses/200"
                     },
                     "400": {
-                        "description": "Bad Request"
+                        "$ref": "#/responses/400"
+                    },
+                    "401": {
+                        "$ref": "#/responses/401"
                     },
                     "404": {
-                        "description": "Not Authorized"
+                        "$ref": "#/responses/404"
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "dataset"
+                ],
+                "description": "Create a new resource",
+                "parameters": [
+                    {
+                        "name": "Content-type",
+                        "in": "header",
+                        "description": "requested Content-type",
+                        "required": true,
+                        "type": "string",
+                        "enum": [
+                            "text/plain",
+                            "text/turtle",
+                            "application/rdf+xml",
+                            "text/csv",
+                            "text/comma-separated-values",
+                            "application/vnd.ms-excel",
+                            "application/excel",
+                            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                            "application/vnd.oasis.opendocument.spreadsheet"
+                        ]
+                    },
+                    {
+                        "name": "file",
+                        "in": "formData",
+                        "description": "data",
+                        "required": false,
+                        "type": "file"
+                    }
+                ],
+                "consumes": [
+                    "text/plain",
+                    "text/turtle",
+                    "application/rdf+xml",
+                    "text/csv",
+                    "text/comma-separated-values",
+                    "application/vnd.ms-excel",
+                    "application/excel",
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    "application/vnd.oasis.opendocument.spreadsheet"
+                ],
+                "produces": [
+                    "text/uri-list"
+                ],
+                "responses": {
+                    "200": {
+                        "$ref": "#/responses/200"
+                    },
+                    "400": {
+                        "$ref": "#/responses/400"
+                    },
+                    "401": {
+                        "$ref": "#/responses/401"
+                    },
+                    "404": {
+                        "$ref": "#/responses/404"
                     }
                 }
             }
@@ -127,48 +193,60 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK"
+                        "$ref": "#/responses/200"
                     },
                     "400": {
-                        "description": "Bad Request"
+                        "$ref": "#/responses/400"
+                    },
+                    "401": {
+                        "$ref": "#/responses/401"
                     },
                     "404": {
-                        "description": "Not Authorized"
+                        "$ref": "#/responses/404"
+                    }
+                }
+            },
+            "head": {
+                "tags": [
+                    "dataset"
+                ],
+                "description": "for service check",
+                "parameters": [
+                    {
+                        "$ref": "#/parameters/id"
+                    },
+                    {
+                        "$ref": "#/parameters/subjectid"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "$ref": "#/responses/200"
+                    },
+                    "400": {
+                        "$ref": "#/responses/400"
+                    },
+                    "401": {
+                        "$ref": "#/responses/401"
+                    },
+                    "404": {
+                        "$ref": "#/responses/404"
                     }
                 }
             }
         },
-        "/dataset/{id}/{features_or_compounds}": {
+        "/dataset/{id}/features": {
             "get": {
                 "tags": [
                     "dataset"
                 ],
-                "description": "Get a list of all datasets",
+                "description": "Get features of a datasets",
                 "parameters": [
                     {
-                        "name": "id",
-                        "in": "path",
-                        "description": "Id of the dataset",
-                        "required": true,
-                        "type": "string"
+                        "$ref": "#/parameters/id"
                     },
                     {
-                        "name": "features_or_compounds",
-                        "in": "path",
-                        "description": "features or compounds of the dataset",
-                        "required": true,
-                        "type": "string",
-                        "enum": [
-                            "compounds",
-                            "features"
-                        ]
-                    },
-                    {
-                        "name": "subjectid",
-                        "in": "header",
-                        "description": "authorization token if A&A active",
-                        "required": false,
-                        "type": "string"
+                        "$ref": "#/parameters/subjectid"
                     },
                     {
                         "name": "accept",
@@ -180,7 +258,7 @@
                             "text/plain",
                             "text/turtle",
                             "application/rdf+xml",
-                            "text/html"
+                            "text/uri-list"
                         ]
                     }
                 ],
@@ -188,20 +266,149 @@
                     "text/plain",
                     "text/turtle",
                     "application/rdf+xml",
-                    "text/html"
+                    "text/uri-list"
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK"
+                        "$ref": "#/responses/200"
                     },
                     "400": {
-                        "description": "Bad Request"
+                        "$ref": "#/responses/400"
+                    },
+                    "401": {
+                        "$ref": "#/responses/401"
                     },
                     "404": {
-                        "description": "Not Authorized"
+                        "$ref": "#/responses/404"
                     }
                 }
             }
+        },
+        "/dataset/{id}/compounds": {
+            "get": {
+                "tags": [
+                    "dataset"
+                ],
+                "description": "Get compounds of a datasets",
+                "parameters": [
+                    {
+                        "$ref": "#/parameters/id"
+                    },
+                    {
+                        "$ref": "#/parameters/subjectid"
+                    },
+                    {
+                        "name": "accept",
+                        "in": "header",
+                        "description": "requested Content-type",
+                        "required": true,
+                        "type": "string",
+                        "enum": [
+                            "text/plain",
+                            "text/turtle",
+                            "application/rdf+xml",
+                            "text/uri-list"
+                        ]
+                    }
+                ],
+                "produces": [
+                    "text/plain",
+                    "text/turtle",
+                    "application/rdf+xml",
+                    "text/uri-list"
+                ],
+                "responses": {
+                    "200": {
+                        "$ref": "#/responses/200"
+                    },
+                    "400": {
+                        "$ref": "#/responses/400"
+                    },
+                    "401": {
+                        "$ref": "#/responses/401"
+                    },
+                    "404": {
+                        "$ref": "#/responses/404"
+                    }
+                }
+            }
+        },
+        "/dataset/{id}/metadata": {
+            "get": {
+                "tags": [
+                    "dataset"
+                ],
+                "description": "Get metadata of a datasets",
+                "parameters": [
+                    {
+                        "$ref": "#/parameters/id"
+                    },
+                    {
+                        "$ref": "#/parameters/subjectid"
+                    },
+                    {
+                        "name": "accept",
+                        "in": "header",
+                        "description": "requested Content-type",
+                        "required": true,
+                        "type": "string",
+                        "enum": [
+                            "text/plain",
+                            "text/turtle",
+                            "application/rdf+xml"
+                        ]
+                    }
+                ],
+                "produces": [
+                    "text/plain",
+                    "text/turtle",
+                    "application/rdf+xml"
+                ],
+                "responses": {
+                    "200": {
+                        "$ref": "#/responses/200"
+                    },
+                    "400": {
+                        "$ref": "#/responses/400"
+                    },
+                    "401": {
+                        "$ref": "#/responses/401"
+                    },
+                    "404": {
+                        "$ref": "#/responses/404"
+                    }
+                }
+            }
+        }
+    },
+    "parameters": {
+        "id": {
+            "name": "id",
+            "in": "path",
+            "description": "Id of the dataset",
+            "required": true,
+            "type": "string"
+        },
+        "subjectid": {
+            "name": "subjectid",
+            "in": "header",
+            "description": "authorization token, required if A&A active",
+            "required": false,
+            "type": "string"
+        }
+    },
+    "responses": {
+        "200": {
+            "description": "OK"
+        },
+        "400": {
+            "description": "Bad Request"
+        },
+        "401": {
+            "description": "Unauthorized"
+        },
+        "404": {
+            "description": "Resource Not Found"
         }
     }
 }
