@@ -93,6 +93,9 @@
                 "description": "Create a new resource",
                 "parameters": [
                     {
+                        "$ref": "#/parameters/subjectid"
+                    },
+                    {
                         "name": "Content-type",
                         "in": "header",
                         "description": "requested Content-type",
@@ -218,6 +221,73 @@
                     {
                         "$ref": "#/parameters/subjectid"
                     }
+                ],
+                "responses": {
+                    "200": {
+                        "$ref": "#/responses/200"
+                    },
+                    "400": {
+                        "$ref": "#/responses/400"
+                    },
+                    "401": {
+                        "$ref": "#/responses/401"
+                    },
+                    "404": {
+                        "$ref": "#/responses/404"
+                    }
+                }
+            },
+            "put": {
+                "tags": [
+                    "dataset"
+                ],
+                "description": "Create a new resource",
+                "parameters": [
+                    {
+                        "$ref": "#/parameters/subjectid"
+                    },
+                    {
+                        "$ref": "#/parameters/id"
+                    },
+                    {
+                        "name": "Content-type",
+                        "in": "header",
+                        "description": "requested Content-type",
+                        "required": true,
+                        "type": "string",
+                        "enum": [
+                            "text/plain",
+                            "text/turtle",
+                            "application/rdf+xml",
+                            "text/csv",
+                            "text/comma-separated-values",
+                            "application/vnd.ms-excel",
+                            "application/excel",
+                            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                            "application/vnd.oasis.opendocument.spreadsheet"
+                        ]
+                    },
+                    {
+                        "name": "file",
+                        "in": "formData",
+                        "description": "data",
+                        "required": false,
+                        "type": "file"
+                    }
+                ],
+                "consumes": [
+                    "text/plain",
+                    "text/turtle",
+                    "application/rdf+xml",
+                    "text/csv",
+                    "text/comma-separated-values",
+                    "application/vnd.ms-excel",
+                    "application/excel",
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    "application/vnd.oasis.opendocument.spreadsheet"
+                ],
+                "produces": [
+                    "text/uri-list"
                 ],
                 "responses": {
                     "200": {
