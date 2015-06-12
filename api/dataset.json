@@ -277,6 +277,37 @@
                         "$ref": "#/responses/404"
                     }
                 }
+            },
+            "delete": {
+                "tags": [
+                    "dataset"
+                ],
+                "description": "Delete a resource",
+                "parameters": [
+                    {
+                        "$ref": "#/parameters/subjectid"
+                    },
+                    {
+                        "$ref": "#/parameters/id"
+                    }
+                ],
+                "produces": [
+                    "text/plain"
+                ],
+                "responses": {
+                    "200": {
+                        "$ref": "#/responses/200"
+                    },
+                    "400": {
+                        "$ref": "#/responses/400"
+                    },
+                    "401": {
+                        "$ref": "#/responses/401"
+                    },
+                    "404": {
+                        "$ref": "#/responses/404"
+                    }
+                }
             }
         },
         "/dataset/{id}/features": {
