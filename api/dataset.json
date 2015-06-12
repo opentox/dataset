@@ -47,7 +47,7 @@
                     {
                         "name": "accept",
                         "in": "header",
-                        "description": "requested Content-type",
+                        "description": "requested Content-Type",
                         "required": true,
                         "type": "string",
                         "enum": [
@@ -96,16 +96,16 @@
                         "$ref": "#/parameters/subjectid"
                     },
                     {
-                        "name": "Content-type",
+                        "name": "Content-Type",
                         "in": "header",
-                        "description": "requested Content-type",
+                        "description": "Content-Type",
                         "required": true,
                         "type": "string",
                         "enum": [
+                            "text/csv",
                             "text/plain",
                             "text/turtle",
                             "application/rdf+xml",
-                            "text/csv",
                             "text/comma-separated-values",
                             "application/vnd.ms-excel",
                             "application/excel",
@@ -114,23 +114,11 @@
                         ]
                     },
                     {
-                        "name": "file",
-                        "in": "formData",
-                        "description": "data",
-                        "required": false,
-                        "type": "file"
+                        "$ref": "#/parameters/file"
                     }
                 ],
                 "consumes": [
-                    "text/plain",
-                    "text/turtle",
-                    "application/rdf+xml",
-                    "text/csv",
-                    "text/comma-separated-values",
-                    "application/vnd.ms-excel",
-                    "application/excel",
-                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    "application/vnd.oasis.opendocument.spreadsheet"
+                    "multipart/form-data"
                 ],
                 "produces": [
                     "text/uri-list"
@@ -138,6 +126,9 @@
                 "responses": {
                     "200": {
                         "$ref": "#/responses/200"
+                    },
+                    "202": {
+                        "$ref": "#/responses/202"
                     },
                     "400": {
                         "$ref": "#/responses/400"
@@ -159,18 +150,10 @@
                 "description": "Get a list of all datasets",
                 "parameters": [
                     {
-                        "name": "id",
-                        "in": "path",
-                        "description": "Id of the dataset",
-                        "required": true,
-                        "type": "string"
+                        "$ref": "#/parameters/id"
                     },
                     {
-                        "name": "subjectid",
-                        "in": "header",
-                        "description": "authorization token if A&A active",
-                        "required": false,
-                        "type": "string"
+                        "$ref": "#/parameters/subjectid"
                     },
                     {
                         "name": "accept",
@@ -250,16 +233,16 @@
                         "$ref": "#/parameters/id"
                     },
                     {
-                        "name": "Content-type",
+                        "name": "Content-Type",
                         "in": "header",
-                        "description": "requested Content-type",
+                        "description": "requested Content-Type",
                         "required": true,
                         "type": "string",
                         "enum": [
+                            "text/csv",
                             "text/plain",
                             "text/turtle",
                             "application/rdf+xml",
-                            "text/csv",
                             "text/comma-separated-values",
                             "application/vnd.ms-excel",
                             "application/excel",
@@ -268,23 +251,11 @@
                         ]
                     },
                     {
-                        "name": "file",
-                        "in": "formData",
-                        "description": "data",
-                        "required": false,
-                        "type": "file"
+                        "$ref": "#/parameters/file"
                     }
                 ],
                 "consumes": [
-                    "text/plain",
-                    "text/turtle",
-                    "application/rdf+xml",
-                    "text/csv",
-                    "text/comma-separated-values",
-                    "application/vnd.ms-excel",
-                    "application/excel",
-                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    "application/vnd.oasis.opendocument.spreadsheet"
+                    "multipart/form-data"
                 ],
                 "produces": [
                     "text/uri-list"
@@ -292,6 +263,9 @@
                 "responses": {
                     "200": {
                         "$ref": "#/responses/200"
+                    },
+                    "202": {
+                        "$ref": "#/responses/202"
                     },
                     "400": {
                         "$ref": "#/responses/400"
@@ -465,11 +439,21 @@
             "description": "authorization token, required if A&A active",
             "required": false,
             "type": "string"
+        },
+        "file": {
+            "name": "file",
+            "in": "formData",
+            "description": "datafile",
+            "required": true,
+            "type": "file"
         }
     },
     "responses": {
         "200": {
             "description": "OK"
+        },
+        "202": {
+            "description": "Accepted"
         },
         "400": {
             "description": "Bad Request"
