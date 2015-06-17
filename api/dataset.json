@@ -3,9 +3,10 @@
     "info": {
         "version": "5.0.0pre1",
         "title": "OpenTox Dataset service",
-        "description": "An OpenTox REST Webservice. \\nStores associations between compounds and features in datasets.\\n",
+        "description": "An OpenTox REST Webservice. <br >Stores associations between compounds and features in datasets.",
         "contact": {
-            "name": "Christoph Helma, in silico toxicology"
+            "name": "Christoph Helma, in silico toxicology",
+            "url": "http://www.in-silico.ch"
         },
         "license": {
             "name": "GNU GENERAL PUBLIC LICENSE",
@@ -468,7 +469,7 @@
             "name": "subjectid",
             "in": "header",
             "description": "authorization token, required if A&A active",
-            "required": false,
+            "required": true,
             "type": "string"
         },
         "file": {
