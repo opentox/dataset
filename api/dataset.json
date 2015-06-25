@@ -6,7 +6,8 @@
         "description": "An OpenTox REST Webservice. <br >Stores associations between compounds and features in datasets.",
         "contact": {
             "name": "Christoph Helma, in silico toxicology",
-            "url": "http://www.in-silico.ch"
+            "url": "http://www.in-silico.ch",
+            "email": "support@in-silico.ch"
         },
         "license": {
             "name": "GNU GENERAL PUBLIC LICENSE",
@@ -46,7 +47,7 @@
                 "description": "Get a list of all datasets",
                 "parameters": [
                     {
-                        "name": "accept",
+                        "name": "Accept",
                         "in": "header",
                         "description": "requested Content-Type",
                         "required": true,
@@ -157,7 +158,7 @@
                         "$ref": "#/parameters/subjectid"
                     },
                     {
-                        "name": "accept",
+                        "name": "Accept",
                         "in": "header",
                         "description": "requested Content-type",
                         "required": true,
@@ -325,7 +326,7 @@
                         "$ref": "#/parameters/subjectid"
                     },
                     {
-                        "name": "accept",
+                        "name": "Accept",
                         "in": "header",
                         "description": "requested Content-type",
                         "required": true,
@@ -374,7 +375,7 @@
                         "$ref": "#/parameters/subjectid"
                     },
                     {
-                        "name": "accept",
+                        "name": "Accept",
                         "in": "header",
                         "description": "requested Content-type",
                         "required": true,
@@ -423,7 +424,7 @@
                         "$ref": "#/parameters/subjectid"
                     },
                     {
-                        "name": "accept",
+                        "name": "Accept",
                         "in": "header",
                         "description": "requested Content-type",
                         "required": true,
@@ -496,5 +497,11 @@
         "404": {
             "description": "Resource Not Found"
         }
-    }
+    },
+    "tags": [
+        {
+            "name": "dataset",
+            "description": "Dataset service"
+        }
+    ]
 }
