@@ -47,7 +47,7 @@
                 "description": "Get a list of all datasets",
                 "parameters": [
                     {
-                        "name": "Accept",
+                        "name": "accept",
                         "in": "header",
                         "description": "requested Content-Type",
                         "required": true,
@@ -158,7 +158,7 @@
                         "$ref": "#/parameters/subjectid"
                     },
                     {
-                        "name": "Accept",
+                        "name": "accept",
                         "in": "header",
                         "description": "requested Content-type",
                         "required": true,
@@ -326,7 +326,7 @@
                         "$ref": "#/parameters/subjectid"
                     },
                     {
-                        "name": "Accept",
+                        "name": "accept",
                         "in": "header",
                         "description": "requested Content-type",
                         "required": true,
@@ -375,7 +375,7 @@
                         "$ref": "#/parameters/subjectid"
                     },
                     {
-                        "name": "Accept",
+                        "name": "accept",
                         "in": "header",
                         "description": "requested Content-type",
                         "required": true,
@@ -424,7 +424,7 @@
                         "$ref": "#/parameters/subjectid"
                     },
                     {
-                        "name": "Accept",
+                        "name": "accept",
                         "in": "header",
                         "description": "requested Content-type",
                         "required": true,
