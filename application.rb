@@ -26,13 +26,7 @@ module OpenTox
       parse_put
     end
 
-    head "/dataset/?" do
-    end
-
-    head '/dataset/:id/?' do
-      halt 404 unless FourStore.head(@uri.split('?').first)
-    end
-
+=begin
     get "/dataset/:id/?" do
       case @accept
       when "application/rdf+xml", "text/turtle", "text/plain", /html/
@@ -54,6 +48,7 @@ module OpenTox
       end
       r
     end
+=end
 
     # Create or update a resource
     put "/dataset/:id/?" do
@@ -63,33 +58,20 @@ module OpenTox
     # Get metadata of the dataset
     # @return [application/rdf+xml] Metadata OWL-DL
     get '/dataset/:id/metadata' do
-      case @accept
-          #{ ?s ?p ?o.  ?s <#{RDF.type}> <#{RDF::OT.Dataset}> .}
-      when "application/rdf+xml", "text/turtle", "text/plain"
-        sparql = "CONSTRUCT {?s ?p ?o.} FROM <#{@uri}> WHERE {
-          { ?s <#{RDF.type}> <#{RDF::OT.Dataset}> ; ?p ?o}
-          UNION { ?s <#{RDF.type}> <#{RDF::OT.Parameter}> ; ?p ?o }
-          MINUS { <#{@uri}> <#{RDF::OT.dataEntry}> ?o. }
-        } "
-        FourStore.query sparql, @accept
-      else
-        bad_request_error "'#{@accept}' is not a supported content type."
-      end
+      render $mongo[SERVICE].find(:uri => @uri).first
+      #render $mongo[SERVICE].find(:uri => @uri).projection(:data_entries => 0).first
+      #case @accept
+      #when "application/rdf+xml", "text/turtle", "text/plain"
+      #else
+      #  bad_request_error "'#{@accept}' is not a supported content type."
+      #end
     end
 
     # Get a list of all features
     # @param [Header] Accept one of `application/rdf+xml, text/turtle, text/plain, text/uri-list` (default application/rdf+xml)
     # @return [application/rdf+xml, text/turtle, text/plain, text/uri-list] Feature data
     get '/dataset/:id/features' do
-      case @accept
-      when "application/rdf+xml", "text/turtle", "text/plain"
-        sparql = "CONSTRUCT {?s ?p ?o.} FROM <#{@uri}> WHERE {?s <#{RDF.type}> <#{RDF::OT.Feature}>; ?p ?o. }"
-      when "text/uri-list"
-        sparql = "SELECT DISTINCT ?s FROM <#{@uri}> WHERE {?s <#{RDF.type}> <#{RDF::OT.Feature}>. ?s <#{RDF::OLO.index}> ?idx } ORDER BY ?idx"
-      else
-        bad_request_error "'#{@accept}' is not a supported content type."
-      end
-      FourStore.query sparql, @accept
+      render $mongo[SERVICE].find(:uri => @uri).distinct(:feature)
     end
 
     # Get a list of all compounds
@@ -97,14 +79,15 @@ module OpenTox
     # @return [application/rdf+xml, text/turtle, text/plain, text/uri-list] Compound data
     get '/dataset/:id/compounds' do
       case @accept
-      when "application/rdf+xml", "text/turtle", "text/plain"
-        sparql = "CONSTRUCT {?s ?p ?o.} FROM <#{@uri}> WHERE {?s <#{RDF.type}> <#{RDF::OT.Compound}>; ?p ?o. }"
+      when "application/json"
+      #when "application/rdf+xml", "text/turtle", "text/plain"
+        #sparql = "CONSTRUCT {?s ?p ?o.} FROM <#{@uri}> WHERE {?s <#{RDF.type}> <#{RDF::OT.Compound}>; ?p ?o. }"
       when "text/uri-list"
-        sparql = "SELECT ?s FROM <#{@uri}> WHERE {?s <#{RDF.type}> <#{RDF::OT.Compound}>. ?s <#{RDF::OLO.index}> ?idx } ORDER BY ?idx"
+        #sparql = "SELECT ?s FROM <#{@uri}> WHERE {?s <#{RDF.type}> <#{RDF::OT.Compound}>. ?s <#{RDF::OLO.index}> ?idx } ORDER BY ?idx"
       else
         bad_request_error "'#{@accept}' is not a supported content type."
       end
-      FourStore.query sparql, @accept
+      render $mongo[SERVICE].find(:uri => @uri).distinct(:compounds)
     end
 
   end

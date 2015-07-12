@@ -66,42 +66,41 @@ module OpenTox
 
       def from_table table
 
-        @warnings = []
-        ntriples = ["<#{@uri}> <#{RDF.type}> <#{RDF::OT.Dataset}>."]
-        ntriples << ["<#{@uri}> <#{RDF.type}> <#{RDF::OT.OrderedDataset}>."]
-        ntriples << ["<#{@uri}> <#{RDF::DC.date}> \"#{DateTime.now}\"."]
+        data = {}
+        data["warnings"] = []
+        data["type"] = ["Dataset","OrderedDataset"]
+        data["date"] = DateTime.now.to_s
+        data["data_entries"] = []
 
         # features
         feature_names = table.shift.collect{|f| f.strip}
-        @warnings << "Duplicate features in table header." unless feature_names.size == feature_names.uniq.size
+        data["warnings"] << "Duplicate features in table header." unless feature_names.size == feature_names.uniq.size
         compound_format = feature_names.shift.strip
         bad_request_error "#{compound_format} is not a supported compound format. Accepted formats: URI, SMILES, InChI." unless compound_format =~ /URI|URL|SMILES|InChI/i
-        features = []
+        data["features"] = []
         ignored_feature_indices = []
         feature_names.each_with_index do |f,i|
           values = table.collect{|row| val=row[i+1]; val.strip! unless val.nil?; val }.uniq.compact
           types = values.collect{|v| feature_type(v)}.uniq
-          metadata = {RDF::DC.title => f}
+          metadata = {"title" => f}
           if values.size == 0 # empty feature
           elsif values.size <= 5 # max classes
-            metadata[RDF.type] = [ RDF::OT.NominalFeature, RDF::OT.StringFeature, RDF::OT.Feature ]
-            metadata[RDF::OT.acceptValue] = values
+            metadata["type"] = [ "NominalFeature", "StringFeature", "Feature" ]
+            metadata["acceptValue"] = values
           end
-          if types.size == 1 and types[0] == RDF::OT.NumericFeature
-            metadata[RDF.type] = [] unless metadata[RDF.type]
-            metadata[RDF.type] << [RDF::OT.NumericFeature, RDF::OT.Feature]
+          if types.size == 1 and types[0] == "NumericFeature"
+            metadata["type"] ||= [] 
+            metadata["type"] << ["NumericFeature", "Feature"]
           else
-            metadata[RDF.type] = [ RDF::OT.NominalFeature, RDF::OT.StringFeature, RDF::OT.Feature ] # only nominal type for mixed cases
-            metadata[RDF::OT.acceptValue] = values
+            metadata["type"] = [ "NominalFeature", "StringFeature", "Feature" ] # only nominal type for mixed cases
+            metadata["acceptValue"] = values
           end
           feature = OpenTox::Feature.find_or_create metadata
-          features << feature unless feature.nil?
-          ntriples << "<#{feature.uri}> <#{RDF.type}> <#{RDF::OT.Feature}>."
-          ntriples << "<#{feature.uri}> <#{RDF::OLO.index}> #{i} ."
+          data["features"] << feature.uri unless feature.nil?
         end
 
         # compounds and values
-        compound_uris = []
+        data["compounds"] = []
         r = -1
         table.each_with_index do |values,j|
           compound = values.shift
@@ -113,7 +112,7 @@ module OpenTox
             when /SMILES/i
               c = OpenTox::Compound.from_smiles(compound)
               if c.inchi.empty?
-                @warnings << "Cannot parse #{compound_format} compound '#{compound}' at position #{j+2}, all entries are ignored."
+                data["warnings"] << "Cannot parse #{compound_format} compound '#{compound}' at position #{j+2}, all entries are ignored."
                 next
               else
                 compound_uri = c.uri
@@ -121,7 +120,7 @@ module OpenTox
             when /InChI/i
               c = OpenTox::Compound.from_inchi(compound)
               if c.inchi.empty?
-                @warnings << "Cannot parse #{compound_format} compound '#{compound}' at position #{j+2}, all entries are ignored."
+                data["warnings"] << "Cannot parse #{compound_format} compound '#{compound}' at position #{j+2}, all entries are ignored."
                 next
               else
                 compound_uri = c.uri
@@ -130,72 +129,35 @@ module OpenTox
               raise "wrong compound format" #should be checked above
             end
           rescue
-            @warnings << "Cannot parse #{compound_format} compound '#{compound}' at position #{j+2}, all entries are ignored." # be careful with double quotes in literals! \C in smiles is an illegal Turtle string
+            data["warnings"] << "Cannot parse #{compound_format} compound '#{compound}' at position #{j+2}, all entries are ignored." # be careful with double quotes in literals! \C in smiles is an illegal Turtle string
             next
           end
           
           r += 1
-          compound_uris << compound_uri
-          unless values.size == features.size
-            @warnings << "Number of values at position #{j+2} (#{values.size}) is different than header size (#{features.size}), all entries are ignored."
+          data["compounds"] << compound_uri
+          unless values.size == data["features"].size
+            data["warnings"] << "Number of values at position #{j+2} (#{values.size}) is different than header size (#{features.size}), all entries are ignored."
             next
           end
 
-          ntriples << "<#{compound_uri}> <#{RDF.type}> <#{RDF::OT.Compound}>."
-          ntriples << "<#{compound_uri}> <#{RDF::OLO.index}> #{r} ."
+          # TODO ordering/index
           #data_entry_node = "<#{File.join @uri,"dataentry",j.to_s}>" # too slow or not accepted by 4store
-          data_entry_node = "_:dataentry"+ r.to_s
-          ntriples << "<#{@uri}> <#{RDF::OT.dataEntry}> #{data_entry_node} ."
-          ntriples << "#{data_entry_node} <#{RDF.type}> <#{RDF::OT.DataEntry}> ."
-          ntriples << "#{data_entry_node} <#{RDF::OLO.index}> #{r} ."
-          ntriples << "#{data_entry_node} <#{RDF::OT.compound}> <#{compound_uri}> ."
+
+          data["data_entries"] << values
           values.each_with_index do |v,i|
             if v.blank?
-              @warnings << "Empty value for compound '#{compound}' (row #{r+2}) and feature '#{feature_names[i]}' (column #{i+2})."
+              data["warnings"] << "Empty value for compound '#{compound}' (row #{r+2}) and feature '#{feature_names[i]}' (column #{i+2})."
               next
-            else
-              value_node = data_entry_node+ "_value"+ i.to_s
-              ntriples << "#{data_entry_node} <#{RDF::OT.values}> #{value_node} ."
-              ntriples << "#{value_node} <#{RDF::OT.feature}> <#{features[i].uri}> ."
-              ntriples << "#{value_node} <#{RDF::OT.value}> \"#{v}\" ."
             end
-
           end
         end
-        compound_uris.duplicates.each do |uri|
+        data["compounds"].duplicates.each do |uri|
           positions = []
-          compound_uris.each_with_index{|c,i| positions << i+1 if !c.blank? and c == uri}
-          @warnings << "Duplicate compound #{uri} at rows #{positions.join(', ')}. Entries are accepted, assuming that measurements come from independent experiments." 
+          data["compounds"].each_with_index{|c,i| positions << i+1 if !c.blank? and c == uri}
+          data["warnings"] << "Duplicate compound #{uri} at rows #{positions.join(', ')}. Entries are accepted, assuming that measurements come from independent experiments." 
         end
-
-        ntriples << "<#{@uri}> <#{RDF::OT.Warnings}> \"#{@warnings.join('\n')}\" ."
-        ntriples.join("\n")
+        data
       end
-
-=begin
-      def to_xlsx
-
-        # both simple_xlsx and axlsx create empty documents with OLE2 errors
-        xlsx = @uri.split("/").last+".xlsx"
-        p = Axlsx::Package.new
-        wb = p.workbook
-        wb.add_worksheet(:name => "test") do |sheet|
-          to_table.each { |row| sheet.add_row row }
-        end
-        p.serialize("test.xlsx")
-
-        p.to_stream
-#```
-        #Tempfile.open(@uri.split("/").last+".xlsx") do |xlsx|
-          SimpleXlsx::Serializer.new(xlsx) do |doc|
-            doc.add_sheet("People") do |sheet|
-              to_table.each { |row| sheet.add_row row }
-            end
-          end
-          send_file xlsx
-        #end
-      end
-=end
 
       def to_csv
         csv_string = CSV.generate do |csv|
@@ -252,16 +214,10 @@ module OpenTox
       def parse_put
         task = OpenTox::Task.run "Dataset upload", @uri do
           case @content_type
-          when "text/plain", "text/turtle", "application/rdf+xml" # no conversion needed
+          when "application/json" # no conversion needed
+          #when "text/plain", "text/turtle", "application/rdf+xml" # no conversion needed
           when "text/csv", "text/comma-separated-values"
             @body = from_csv @body
-            @content_type = "text/plain"
-          when "application/vnd.ms-excel", "application/excel"
-            from_spreadsheet Roo::Excel
-          when "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            from_spreadsheet Roo::Excelx
-          when "application/vnd.oasis.opendocument.spreadsheet"
-            from_spreadsheet Roo::Openoffice
     #      when "chemical/x-mdl-sdfile"
     #        @body = parse_sdf @body
     #        @content_type = "text/plain"
@@ -269,10 +225,13 @@ module OpenTox
             bad_request_error "#{@content_type} is not a supported content type."
           end
           if params["file"]
-            nt = "<#{@uri}> <#{RDF::DC.title}> \"#{params["file"][:filename]}\".\n<#{@uri}> <#{RDF::OT.hasSource}> \"#{params["file"][:filename]}\"."
-            FourStore.put(@uri, nt, "text/plain")
+            @body[:title] = params["file"][:filename]
+            @body[:hasSource] = params["file"][:filename]
           end
-          nt ? FourStore.post(@uri, @body, @content_type) : FourStore.put(@uri, @body, @content_type) 
+          
+          @body["uri"] = @uri
+          @body["uuid"] = @uri.split(/\//).last
+          $mongo[SERVICE].insert_one(@body).inspect
           @uri
         end
         response['Content-Type'] = "text/uri-list"
